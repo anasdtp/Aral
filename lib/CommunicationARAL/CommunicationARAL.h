@@ -1,8 +1,10 @@
 #include <Arduino.h>
 
-
 #define HEADER_DEBUT 0x02
 #define HEADER_FIN 0x03
+
+#define MIN_SIZE 4 //taille minimale d'une trame en octets
+
 // uC vers ARAL : 
 /*
 Protocole de communication : 
@@ -10,14 +12,14 @@ Bloc Avec Info :
   [HEADER] 1 octect = 0x02 [02]
   [ID] 1 octet Identité du message
   [DATA] taille variable, minimum 1 octet
-  [CHEKSUM] 1 octet, checksum 
-  [HEADER] A octet = 0x03 [03]
+  [CHECKSUM] 1 octet, checksum 
+  [HEADER] 1 octet = 0x03 [03]
 
 Bloc sans Info :
   [HEADER] 1 octect = 0x02 [02]
   [ID] 1 octet Identité du message
-  [CHEKSUM] 1 octet, checksum, toujours égale à 0
-  [HEADER] A octet = 0x03 [03]
+  [CHECKSUM] 1 octet, checksum, toujours égale à 0
+  [HEADER] 1 octet = 0x03 [03]
 */
 //Liste des ID : 
 #define ID_POLLING_ARAL 0x11 //Sans bloc INFOS
@@ -37,14 +39,14 @@ Bloc Avec Info :
   [ID] 1 octet Identité du message
   [NB] 1 octet, NB = (Nombre d'octets dans DATA + 0x10)
   [DATA] taille variable, minimum 1 octet
-  [CHEKSUM] 1 octet, checksum, XOR de tous les octets data 
-  [HEADER] A octet = 0x03 [03]
+  [CHECKSUM] 1 octet, checksum, XOR de tous les octets data 
+  [HEADER] 1 octet = 0x03 [03]
 
 Bloc Sans Info :    
   [HEADER] 1 octect = 0x02 [02]
   [ID] 1 octet Identité du message
-  [CHEKSUM] 1 octet, checksum, toujours égale à 0
-  [HEADER] A octet = 0x03 [03]
+  [CHECKSUM] 1 octet, checksum, toujours égale à 0
+  [HEADER] 1 octet = 0x03 [03]
 */
 //Liste des ID : 
 #define ID_ACKNOWLEDGE_POLLING 0x20 //Sans bloc INFOS
@@ -59,14 +61,14 @@ Bloc Sans Info :
 
 
 
-#define SIZE_FIFO 150
+#define SIZE_FIFO 32 //maximum 150 du fait du type char
 
 
 typedef struct Message{
     uint8_t id;
     uint8_t len;
     uint8_t *data;
-    uint8_t checksum;
+    // uint8_t checksum;
 }Message;
 
 // État de la réception
@@ -82,8 +84,17 @@ enum StateRx{
 class CommunicationARAL
 {
 public:
-    CommunicationARAL(HardwareSerial *srl, long baud = 115200);
-    ~CommunicationARAL();
+    CommunicationARAL();
+
+    void begin(HardwareSerial *srl = &Serial2, long baud = 115200);
+    void end();
+
+    void RxManage();
+    void sendMsg(Message txMsg);
+    void sendMsg(uint8_t id);
+    void sendMsg(uint8_t id, uint8_t len, uint8_t *data);
+
+    void printMessage(Message msg);
 
 private:
     HardwareSerial *_serial;

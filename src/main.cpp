@@ -11,12 +11,13 @@ SelectionDeLaVoieBUS bus = (SelectionDeLaVoieBUS){18, 19, 21};
 SelectionDeLaVoieENABLEMUX enable = (SelectionDeLaVoieENABLEMUX){22, 23, 25, 26, 27, 32};
 SelectionDeLaVoie Voie(bus, enable);
 
-CommunicationARAL com(&Serial2, 115200);
+CommunicationARAL com;
 
 void selectionVoie(Tension alarme, uint8_t voie);
 void ControleParMoniteurSerie();
 void setup() {
   Serial.begin(115200);
+  com.begin(&Serial2, 115200);
   delay(100);
   Serial.println("Hello World");
   
@@ -24,6 +25,7 @@ void setup() {
 }
 
 void loop() {
+  com.RxManage();
   ControleParMoniteurSerie();
 }
 
