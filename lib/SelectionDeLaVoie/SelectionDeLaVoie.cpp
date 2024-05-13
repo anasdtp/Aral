@@ -63,6 +63,14 @@ void SelectionDeLaVoie::enableMUX(uint8_t etat){//0, 1, 2, 3, 4 ou 5; Si etat>5,
     Serial.printf("SelectionDeLaVoie::enableMUX : etat : %d\n", etat); 
 }
 
+void SelectionDeLaVoie::disableMUX(bool disable){
+    if(disable){
+        digitalWrite(_enable.EN_MUX0, false);   digitalWrite(_enable.EN_MUX1, false);   digitalWrite(_enable.EN_MUX2, false);
+        digitalWrite(_enable.EN_MUX3, false);   digitalWrite(_enable.EN_MUX4, false);   digitalWrite(_enable.EN_MUX5, false);   
+        Serial.printf("SelectionDeLaVoie::disableMUX\n"); 
+    }
+}
+
 //voie entre 1 et 48; si au dessus de 48, 49 = 1, 50 = 2, ...etc Cela doit donc etre strictement inferieur à 97
 void SelectionDeLaVoie::selectionVoie(uint8_t voie){
     if(voie>96 || voie == 0){

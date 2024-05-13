@@ -16,9 +16,10 @@ public:
     SelectionDeLaVoie(SelectionDeLaVoieBUS bus, SelectionDeLaVoieENABLEMUX enable);
     ~SelectionDeLaVoie();
 
-    void setBus(uint8_t etat);
-    void enableMUX(uint8_t etat);
-    void selectionVoie(uint8_t voie);
+    void setBus(uint8_t etat = 0);
+    void enableMUX(uint8_t etat = 0);
+    void disableMUX(bool disable = true);
+    void selectionVoie(uint8_t voie = 0);
 
 private:
     SelectionDeLaVoieBUS _bus;

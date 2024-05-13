@@ -1,0 +1,5 @@
+{
+    "sketch": "..\\..\\..\\Arduino\\Httpclient\\Httpclient\\Httpclient.ino",
+    "configuration": "EraseFlash=Disable,AutoUploadMode=Disable,StdLibInit=Disable",
+    "board": "realtek:AmebaD:Ai-Thinker_BW16"
+}

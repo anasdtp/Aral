@@ -13,6 +13,8 @@
 CommunicationARAL::CommunicationARAL()
 {
     FIFO_ecriture = 0;
+    ACK.waitingAckFrom = 0;
+    ACK.AckFrom_FLAG = false;
 }
 
 void CommunicationARAL::begin(HardwareSerial *srl, long baud){
@@ -34,6 +36,7 @@ void CommunicationARAL::onReceiveFunction(void) {
 
     while (availableData()) {
         uint8_t byte = readData();
+        Serial.printf("%2X ",byte);
 
         switch (currentState) {
             case WAITING_HEADER:{
@@ -72,7 +75,7 @@ void CommunicationARAL::onReceiveFunction(void) {
                 } else {
                     // Gérer l'erreur de checksum ici
                     Serial.println("CommunicationARAL::onReceiveFunction() : Erreur calcul checksum");
-                    currentState = WAITING_FOOTER;
+                    currentState = WAITING_HEADER;
                 }
                 }break;
 
@@ -99,13 +102,20 @@ void CommunicationARAL::RxManage(){
     if(FIFO_max_occupation<FIFO_occupation){FIFO_max_occupation=FIFO_occupation;}
     if(!FIFO_occupation){return;}
     //Alors il y a un nouveau message en attente de traitement
+    printMessage(rxMsg[FIFO_lecture]);
 
-    switch (rxMsg->id)
+    if ((ACK.waitingAckFrom == rxMsg[FIFO_lecture].id))
     {
-        case ID_ACKNOWLEDGE_POLLING:{
-            //Sans bloc INFOS
+        Serial.printf(" ack recu \n");
+        ACK.waitingAckFrom = 0;
+        ACK.AckFrom_FLAG = true;
+    }
+    switch (rxMsg[FIFO_lecture].id)
+    {
+        // case ID_ACKNOWLEDGE_POLLING:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
 
         case ID_ACKNOWLEDGE_POLLING_DATA:{
             //Avec bloc INFOS
@@ -114,38 +124,41 @@ void CommunicationARAL::RxManage(){
 
         case ID_ACKNOWLEDGE_CHECK_CAPTEURS:{
             //Avec bloc INFOS
-
+            for (int i = 0; i < rxMsg[FIFO_lecture].len; i++){
+                if(i>=96){break;}
+                etatVoies.voies[i] = rxMsg[FIFO_lecture].data[i];
+            }
         }break;
 
-        case ID_ACKNOWLEDGE_ORDRES:{
-            //Sans bloc INFOS
+        // case ID_ACKNOWLEDGE_ORDRES:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
 
-        case ID_ACKNOWLEDGE_PREMIERE_SCRUTATION:{
-            //Sans bloc INFOS
+        // case ID_ACKNOWLEDGE_PREMIERE_SCRUTATION:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
 
-        case ID_ACKNOWLEDGE_DIFINITIVE_SCRUTATION:{
-            //Sans bloc INFOS
+        // case ID_ACKNOWLEDGE_DIFINITIVE_SCRUTATION:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
 
-        case ID_ACKNOWLEDGE_RESET:{
-            //Sans bloc INFOS
+        // case ID_ACKNOWLEDGE_RESET:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
 
-        case ID_DEMANDE_REPETITION_ARAL:{
-            //Sans bloc INFOS
+        // case ID_DEMANDE_REPETITION_ARAL:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
 
-        case ID_ACKNOWLEDGE_INHIBITION:{
-            //Sans bloc INFOS
+        // case ID_ACKNOWLEDGE_INHIBITION:{
+        //     //Sans bloc INFOS
 
-        }break;
+        // }break;
     
         default:
             break;
@@ -205,6 +218,14 @@ void CommunicationARAL::sendMsg(uint8_t id, uint8_t len, uint8_t *data){
     delete[] txMsg.data;
 }
 
+bool CommunicationARAL::checkACK(bool afterCkeck){
+    if(ACK.AckFrom_FLAG){
+       ACK.AckFrom_FLAG = afterCkeck;
+       return true; 
+    }
+    return false;
+}
+
 
 bool CommunicationARAL::MsgAvecBlocINFOS(uint8_t ID){
     bool blocAvecINFOS = false;
@@ -224,11 +245,11 @@ bool CommunicationARAL::MsgAvecBlocINFOS(uint8_t ID){
             blocAvecINFOS = true;
         }
         break;
-        case ID_PREMIERE_SCUTATION:{//Sans bloc INFOS
+        case ID_PREMIERE_SCRUTATION:{//Sans bloc INFOS
             blocAvecINFOS = false;
         }
         break;
-        case ID_DIFINITIVE_SCUTATION:{//Sans bloc INFOS
+        case ID_DIFINITIVE_SCRUTATION:{//Sans bloc INFOS
             blocAvecINFOS = false;
         }
         break;
@@ -299,12 +320,12 @@ bool CommunicationARAL::MsgAvecBlocINFOS(uint8_t ID){
 void CommunicationARAL::printMessage(Message msg){
       Serial.println ("*************************************************");
       Serial.println("Reception d'un nouveau message");
-      Serial.printf("ID : %d", msg.id);
+      Serial.printf("ID : %2X", msg.id);
       if(msg.len){
         Serial.printf(", len : %d, data[%d] = ", msg.len, msg.len);
         for (int i = 0; i < msg.len; i++)
         {
-            Serial.printf("[%X] ", msg.data[i]);
+            Serial.printf("[%2X] ", msg.data[i]);
         }
       }
       Serial.println(".");
