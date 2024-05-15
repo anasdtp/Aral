@@ -102,7 +102,13 @@ ID_DIFINITIVE_SCUTATION :
 
 */
 
-#define TIMEOUT_ACK 1000 //ms
+//Etat des voies
+#define ETAT_COURT_CIRCUIT 0x0
+#define ETAT_ALARME 0x10
+#define ETAT_NORMAL 0x30
+#define ETAT_CONGRUENCE 0x70
+
+#define TIMEOUT_ACK 5000 //ms
 
 #define SIZE_FIFO 32 //maximum 150 du fait du type char
 
@@ -114,9 +120,9 @@ typedef struct Message{
     // uint8_t checksum;
 }Message;
 
-typedef struct EtatVoies{
+typedef struct AlarmeVoies{
     uint8_t voies[96];
-}EtatVoies;
+}AlarmeVoies;
 
 // État de la réception
 enum StateRx{
@@ -129,8 +135,10 @@ enum StateRx{
 };
 
 typedef struct ManageACK{
+  uint8_t id;
   uint8_t waitingAckFrom;
   bool AckFrom_FLAG;
+  bool RepeatRequest_FLAG;
 }ManageACK;
 
 class CommunicationARAL
@@ -138,7 +146,7 @@ class CommunicationARAL
 public:
     CommunicationARAL();
 
-    void begin(HardwareSerial *srl = &Serial2, long baud = 9600);
+    void begin(HardwareSerial *srl = &Serial2, long baud = 2400);
     void end();
 
     void RxManage();
@@ -148,9 +156,10 @@ public:
 
     void printMessage(Message msg);
 
-    EtatVoies etatVoies;
+    AlarmeVoies etatVoies;
     ManageACK ACK;
     bool checkACK(bool afterCkeck = false);
+    bool checkRepeatRequest(bool afterCkeck = false);
 
 private:
     HardwareSerial *_serial;

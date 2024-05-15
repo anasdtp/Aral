@@ -9,6 +9,7 @@ SelectionDeLaVoie::SelectionDeLaVoie(SelectionDeLaVoieBUS bus, SelectionDeLaVoie
     _enable = enable;
 
     initOutput();
+    disableMUX();
 }
 
 SelectionDeLaVoie::~SelectionDeLaVoie()
@@ -37,7 +38,7 @@ void SelectionDeLaVoie::setBus(uint8_t etat){
     bool etatPinC = ((etat>>2) & 0x01)? HIGH : LOW;
 
     digitalWrite(_bus.pinA, etatPinA);   digitalWrite(_bus.pinB, etatPinB);   digitalWrite(_bus.pinC, etatPinC);      
-    Serial.printf("SelectionDeLaVoie::setBus : etat : %d, etatPinC : %d, etatPinB : %d, etatPinA : %d\n", etat, etatPinC, etatPinB, etatPinA);  
+    // Serial.printf("SelectionDeLaVoie::setBus : etat : %d, etatPinC : %d, etatPinB : %d, etatPinA : %d\n", etat, etatPinC, etatPinB, etatPinA);  
 }
 
 void SelectionDeLaVoie::enableMUX(uint8_t etat){//0, 1, 2, 3, 4 ou 5; Si etat>5, 6 = 0, 7 = 1...etc etat strictement inferieur à 12
@@ -60,14 +61,14 @@ void SelectionDeLaVoie::enableMUX(uint8_t etat){//0, 1, 2, 3, 4 ou 5; Si etat>5,
 
     digitalWrite(_enable.EN_MUX0, E0);   digitalWrite(_enable.EN_MUX1, E1);   digitalWrite(_enable.EN_MUX2, E2);
     digitalWrite(_enable.EN_MUX3, E3);   digitalWrite(_enable.EN_MUX4, E4);   digitalWrite(_enable.EN_MUX5, E5);   
-    Serial.printf("SelectionDeLaVoie::enableMUX : etat : %d\n", etat); 
+    // Serial.printf("SelectionDeLaVoie::enableMUX : etat : %d\n", etat); 
 }
 
 void SelectionDeLaVoie::disableMUX(bool disable){
     if(disable){
         digitalWrite(_enable.EN_MUX0, false);   digitalWrite(_enable.EN_MUX1, false);   digitalWrite(_enable.EN_MUX2, false);
         digitalWrite(_enable.EN_MUX3, false);   digitalWrite(_enable.EN_MUX4, false);   digitalWrite(_enable.EN_MUX5, false);   
-        Serial.printf("SelectionDeLaVoie::disableMUX\n"); 
+        // Serial.printf("SelectionDeLaVoie::disableMUX\n"); 
     }
 }
 

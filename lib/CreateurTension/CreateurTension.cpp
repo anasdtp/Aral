@@ -26,7 +26,7 @@ void CreateurTension::setBus(CreateurTensionBUS bus, uint8_t etat){
     bool etatPinA = (etat & 0x01)? HIGH : LOW;
     bool etatPinB = ((etat>>1) & 0x01)? HIGH : LOW;
     digitalWrite(bus.pinA, etatPinA);    digitalWrite(bus.pinB, etatPinB);
-    Serial.printf("CreateurTension::setBus : etat : %d, etatPinB : %d, etatPinA : %d\n", etat, etatPinB, etatPinA);
+    // Serial.printf("CreateurTension::setBus : etat : %d, etatPinB : %d, etatPinA : %d\n", etat, etatPinB, etatPinA);
 }
 
 void CreateurTension::creationTensionVoie_1_48(Tension tension){
