@@ -3,6 +3,7 @@
 #include <CreateurTension.h>
 #include <SelectionDeLaVoie.h>
 #include <CommunicationARAL.h>
+#include <IHM.h>
 
 //On renseigne les 2 pins du bus 2 bits createur de tension. Si le bus est égale à 0x0, COURT_CIRCUIT, 0x1 ALARME, 0x2 NORMAL et 0x3 CONGRUENCE.
 CreateurTensionBUS busA = (CreateurTensionBUS){4,   5};
@@ -28,6 +29,10 @@ bool ControleParMoniteurSerie();
 void setup() {
   Serial.begin(921600);
   Serial.println("Hello World! Banc de test Carte ARAL");
+  IHM_begin();
+  setLedColor(NUM_PIXELS, WHITE);
+  printMidOLED("Banc de\ntest\nARAL", 2, 1);
+
   //On initialise la communication série avec la carte ARAL à 2400 baud.
   //La fonction begin initialise ensuite une fonction d'interruption se declenchant à chaque réception d'un message.
   com.begin(&Serial2, 2400);
@@ -97,7 +102,8 @@ void getTension(EtatVoies &voies, bool affichage){
 
 void txLoop(){
   static BilanTest bilan;
-  static int etat = 0; static const int INIT = 0, TEST = 1, NONE = 55;
+  static const int INIT = 0, TEST = 1, BILAN = 3;
+  static int etat = INIT; 
   switch (etat)
   {
   case INIT:
@@ -107,19 +113,34 @@ void txLoop(){
       etat = TEST;
       initDone = true;
       Serial.println("Communication carte ARAL initialisée !");
+
     }
+
+    //Test Bilan a commenté: 
+    // for (int i = 0; i < 96; i++)
+    // {
+    //   bilan.voies[i] = VOIE_OK;
+    // }
+    // bilan.voies[33] = VOIE_EN_DEFAUT;
+    // bilan.voies[11] = VOIE_NONE;
+    // bilan.voies[22] = VOIE_EN_DEFAUT;
+    // bilan.voies[88] = VOIE_EN_DEFAUT;
+    // bilan.voies[77] = VOIE_EN_DEFAUT;
+    // etat = BILAN; 
   }
     break;
   case TEST:
   {
     if(TestComCarteARAL(bilan)){
-      etat = NONE;
+       LedBilanTest(bilan);
+      etat = BILAN;
+      LedEtatProgramme(2);
     }
   }
     break;
-  case NONE:
+  case BILAN:
   {
-    return;
+    displayBilanTest(bilan);
   }
     break;
   default:
@@ -133,14 +154,20 @@ bool initialisationARAL(){
   static const char etat_init[4] = {RESET, PREMIERE_SCRUTATION, CHECK_CAPTEURS, DIFINITIVE_SCRUTATION}, nbInstructions = 4;
   static char etat = etat_init[0], etape = 1, etat_suiv = 0;
   static uint32_t startTimeVoie = 0;
+  static uint8_t *color[3] = {GREEN};
+  static String msgErreur = "";
 
   switch (etat)
   {
     case RESET:{
+      static int nb_essais = 0;
       Serial.println("INITIALISATION CARTE ARAL...");
+      printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur , 1, 1);
       com.ACK.id = ID_RESET;
       com.ACK.waitingAckFrom = ID_ACKNOWLEDGE_RESET;
       com.sendMsg(com.ACK.id);
+
+      setLedColor(etat+1 + (nb_essais++), color[0]);
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
@@ -148,9 +175,12 @@ bool initialisationARAL(){
     }
     break;
     case PREMIERE_SCRUTATION:{
+      printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur , 1, 1);
       com.ACK.id = ID_PREMIERE_SCRUTATION;
       com.ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
       com.sendMsg(com.ACK.id);
+
+      setLedColor(etat+1, color[0]);
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
@@ -162,6 +192,8 @@ bool initialisationARAL(){
       com.ACK.waitingAckFrom = ID_ACKNOWLEDGE_CHECK_CAPTEURS;
       com.sendMsg(com.ACK.id);
 
+      setLedColor(etat+1, color[0]);
+
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
       startTimeVoie = millis();
@@ -172,6 +204,8 @@ bool initialisationARAL(){
       com.ACK.waitingAckFrom = ID_ACKNOWLEDGE_DIFINITIVE_SCRUTATION;
       com.sendMsg(com.ACK.id);
 
+      setLedColor(etat+1, color[0]);
+
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
       startTimeVoie = millis();
@@ -180,6 +214,8 @@ bool initialisationARAL(){
     case ATT_ACK:{
       if(com.checkACK()){
         Serial.println("ACK reçu ! ");
+        msgErreur = "\nACK recu !";
+        color[0] = GREEN;
         etat = etat_suiv;
         etape ++;
         if(etape > nbInstructions){
@@ -188,11 +224,15 @@ bool initialisationARAL(){
       }
       else if(com.checkRepeatRequest()){
         Serial.println("La carte ARAL demande une repetition du dernier message...");
+        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1, 1);
         com.sendMsg(com.ACK.id);
+        color[0] = BLUE;
       }
       else if((millis() - startTimeVoie)> TIMEOUT_ACK){
         Serial.println("La carte ARAL ne repond pas !");
         Serial.println("Commande RESET ARAL...");
+        msgErreur = "La carte ARAL \n ne repond pas ! \n Verifier switch 8";
+        color[0] = RED;
         // com.sendMsg(ID_RESET);
         etat = RESET;
       }
@@ -202,6 +242,8 @@ bool initialisationARAL(){
       Serial.println("Communication carte ARAL Fonctionnelle !");
       EtatVoies voies;
       getTension(voies, true);
+      setLedColor(1);//NUM_PIXELS);
+      LedEtatProgramme(0);
       etat = NONE;
       return true;
     }
@@ -257,6 +299,9 @@ bool TestComCarteARAL(BilanTest &bilan){
         if(nombreDeTours>=NBTOUR){
           etat = FINISH;
         }
+
+        LedEtatProgramme(1);
+
       }
     }
     break;
@@ -307,6 +352,10 @@ bool TestComCarteARAL(BilanTest &bilan){
         Serial.println(" LA VOIE N'EST PAS BONNE!!");
         bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
       }
+      displayEtatVoie(voieActuelle, alarmeText[alarmeActuelle], bilan.voies[voieActuelle-1]);
+
+      LedAlarmeActuelle(alarmeActuelle);
+      LedEtatVoieActuelle(bilan.voies[voieActuelle-1]);
       etat = SELECTION_DE_VOIE;
       etape = 1;
     }
@@ -314,6 +363,7 @@ bool TestComCarteARAL(BilanTest &bilan){
     case ATT_ACK:{
       if(com.checkACK()){
         // Serial.println("ACK reçu ! ");
+        LedACK();
         etat = etat_suiv;
         etape ++;
         if(etape > nbInstructions){
@@ -322,8 +372,11 @@ bool TestComCarteARAL(BilanTest &bilan){
         }
       }
       else if(com.checkRepeatRequest()){
+        LedACK();
         Serial.println("La carte ARAL demande une repetition du dernier message...");
         com.sendMsg(com.ACK.id);
+        setLedColor(NUM_PIXELS, BLUE);
+        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1, 1);
       }  
     }
     break;
