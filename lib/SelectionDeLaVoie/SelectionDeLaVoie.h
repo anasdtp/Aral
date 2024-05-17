@@ -1,3 +1,6 @@
+#ifndef _SelectionDeLaVoie_LIB
+#define _SelectionDeLaVoie_LIB
+
 #include <Arduino.h>
 
 typedef struct SelectionDeLaVoieBUS
@@ -28,3 +31,4 @@ private:
     void initOutput();
 };
 
+#endif //_SelectionDeLaVoie_LIB

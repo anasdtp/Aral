@@ -1,11 +1,8 @@
 #include <Arduino.h>
+#include <Commun.h>
 #include <CreateurTension.h>
 #include <SelectionDeLaVoie.h>
 #include <CommunicationARAL.h>
-
-typedef struct EtatVoies{
-    Tension voies[96];
-}EtatVoies;
 
 //On renseigne les 2 pins du bus 2 bits createur de tension. Si le bus est égale à 0x0, COURT_CIRCUIT, 0x1 ALARME, 0x2 NORMAL et 0x3 CONGRUENCE.
 CreateurTensionBUS busA = (CreateurTensionBUS){4,   5};
@@ -22,18 +19,19 @@ CommunicationARAL com;
 
 
 void selectionVoie(Tension alarme, uint8_t voie = 1);
+void getTension(EtatVoies &voies, bool affichage = false);
 void txLoop();
 bool initialisationARAL();
-void TestComCarteARAL();
+bool TestComCarteARAL(BilanTest &bilan);
 void TestContinueVoiesBoucleOuverte();
 bool ControleParMoniteurSerie();
 void setup() {
   Serial.begin(921600);
-
+  Serial.println("Hello World! Banc de test Carte ARAL");
   //On initialise la communication série avec la carte ARAL à 2400 baud.
   //La fonction begin initialise ensuite une fonction d'interruption se declenchant à chaque réception d'un message.
   com.begin(&Serial2, 2400);
-  delay(500);
+  delay(2000);//On laisse la carte ARAL s'initialiser
 
   // com.sendMsg(ID_RESET);
   // while(!ControleParMoniteurSerie());
@@ -42,11 +40,10 @@ void setup() {
 void loop() {
   //Fonction qui gére en parrallele les données triées prealablement 
   com.RxManage();
-  // initialisationARAL();
-  // txLoop();
 
-  TestContinueVoiesBoucleOuverte();
-  
+  txLoop();
+
+  // TestContinueVoiesBoucleOuverte();
 }
 
 void selectionVoie(Tension alarme, uint8_t voie){//de 1 à 96
@@ -74,8 +71,11 @@ void selectionVoie(Tension alarme, uint8_t voie){//de 1 à 96
   Voie.selectionVoie(voie);
 }
 
-void getTension(EtatVoies &voies){
-  Serial.print("get Tension des 96 voies : Voies[96] = ");
+void getTension(EtatVoies &voies, bool affichage){
+  static String alarmeText[4]={"COURT_CIRCUIT", "ALARME_______", "NORMAL_______", "CONGRUENCE___"};
+
+  if(affichage){Serial.println("get Tension des 96 voies : Voies[96] = ");}
+  
   for (int numVoie = 0; numVoie < 96; numVoie++)
   {
     if(com.etatVoies.voies[numVoie] == ETAT_COURT_CIRCUIT){
@@ -90,25 +90,49 @@ void getTension(EtatVoies &voies){
     else if(com.etatVoies.voies[numVoie] == ETAT_CONGRUENCE){
       voies.voies[numVoie] = CONGRUENCE;
     }
-    Serial.printf(" [%d]", voies.voies[numVoie]);
+    if(affichage){Serial.printf("%2d [%s]\n", numVoie+1, alarmeText[int(voies.voies[numVoie])]);}
   }
-  Serial.println("");
+  if(affichage){Serial.println("");}
 }
 
 void txLoop(){
-  bool initDone = false;
-  if(initialisationARAL() && !initDone){
-    initDone = true;
+  static BilanTest bilan;
+  static int etat = 0; static const int INIT = 0, TEST = 1, NONE = 55;
+  switch (etat)
+  {
+  case INIT:
+  {
+    static bool initDone = false;
+    if(initialisationARAL() && !initDone){
+      etat = TEST;
+      initDone = true;
+      Serial.println("Communication carte ARAL initialisée !");
+    }
   }
-  if(initDone){
-    TestComCarteARAL();
+    break;
+  case TEST:
+  {
+    if(TestComCarteARAL(bilan)){
+      etat = NONE;
+    }
+  }
+    break;
+  case NONE:
+  {
+    return;
+  }
+    break;
+  default:
+    etat = 0;
+    break;
   }
 }
 
 bool initialisationARAL(){
-  static const char RESET = 0, PREMIERE_SCRUTATION = 1, CHECK_CAPTEURS = 2, DIFINITIVE_SCRUTATION = 3, ATT_ACK = 4, FINISH = 5;
+  static const char RESET = 0, PREMIERE_SCRUTATION = 1, CHECK_CAPTEURS = 2, DIFINITIVE_SCRUTATION = 3, ATT_ACK = 4, FINISH = 5, NONE = 55;
   static const char etat_init[4] = {RESET, PREMIERE_SCRUTATION, CHECK_CAPTEURS, DIFINITIVE_SCRUTATION}, nbInstructions = 4;
   static char etat = etat_init[0], etape = 1, etat_suiv = 0;
+  static uint32_t startTimeVoie = 0;
 
   switch (etat)
   {
@@ -120,6 +144,7 @@ bool initialisationARAL(){
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
+      startTimeVoie = millis();
     }
     break;
     case PREMIERE_SCRUTATION:{
@@ -129,6 +154,7 @@ bool initialisationARAL(){
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
+      startTimeVoie = millis();
     }
     break;
     case CHECK_CAPTEURS:{
@@ -138,6 +164,7 @@ bool initialisationARAL(){
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
+      startTimeVoie = millis();
     }
     break;
     case DIFINITIVE_SCRUTATION:{
@@ -147,6 +174,7 @@ bool initialisationARAL(){
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
+      startTimeVoie = millis();
     }
     break;
     case ATT_ACK:{
@@ -156,18 +184,31 @@ bool initialisationARAL(){
         etape ++;
         if(etape > nbInstructions){
           etat = FINISH;
-          return true;
         }
       }
       else if(com.checkRepeatRequest()){
+        Serial.println("La carte ARAL demande une repetition du dernier message...");
         com.sendMsg(com.ACK.id);
-      }      
+      }
+      else if((millis() - startTimeVoie)> TIMEOUT_ACK){
+        Serial.println("La carte ARAL ne repond pas !");
+        Serial.println("Commande RESET ARAL...");
+        // com.sendMsg(ID_RESET);
+        etat = RESET;
+      }
     }
     break;
     case FINISH:{
+      Serial.println("Communication carte ARAL Fonctionnelle !");
+      EtatVoies voies;
+      getTension(voies, true);
+      etat = NONE;
       return true;
     }
     break;
+    case NONE:{
+      return true;
+    }break;
     default:
       break;
   }
@@ -175,12 +216,14 @@ bool initialisationARAL(){
   return false;
 }
 
-void TestComCarteARAL(){
-  static const char SELECTION_DE_VOIE = 0, PREMIERE_SCRUTATION = 1, CHECK_CAPTEURS = 2, DIFINITIVE_SCRUTATION = 3, VERIFICATION_BONNE_VOIE = 4, ATT_ACK = 5;
+bool TestComCarteARAL(BilanTest &bilan){
+  static const char SELECTION_DE_VOIE = 0, PREMIERE_SCRUTATION = 1, CHECK_CAPTEURS = 2, DIFINITIVE_SCRUTATION = 3, VERIFICATION_BONNE_VOIE = 4, ATT_ACK = 5, FINISH = 6, NONE = 55;
   static const char etat_init[5] = {SELECTION_DE_VOIE, PREMIERE_SCRUTATION, CHECK_CAPTEURS, DIFINITIVE_SCRUTATION, VERIFICATION_BONNE_VOIE}, nbInstructions = 5;
   static char etat = etat_init[0], etape = 1, etat_suiv = 0;
+  static String alarmeText[4]={"COURT_CIRCUIT", "___ALARME____", "___NORMAL____", "_CONGRUENCE__"};
 
-  static int voieActuelle = 1; static uint32_t startTimeVoie = 0, TempsSwitchVoie = 750/3; 
+  static int voieActuelle = 1, nombreDeTours = 0, NBTOUR = 1; 
+  static uint32_t startTimeVoie = 0, TempsSwitchVoie = 0;//750/3; 
   static int _numAlarme = 0; static Tension _TabTension[4]={COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE}, alarmeActuelle;
 
   switch (etat)
@@ -202,12 +245,18 @@ void TestComCarteARAL(){
         _numAlarme = (_numAlarme + 1)%4;
         if(!_numAlarme){
           voieActuelle = (voieActuelle + 1)%97;
-          if(!voieActuelle){voieActuelle = 1;}
+          if(!voieActuelle){
+            voieActuelle = 1;
+            nombreDeTours++;
+          }
         }
         etape = 1;
         etat_suiv = etat_init[etape];
         etat = etat_suiv;
         etape++;
+        if(nombreDeTours>=NBTOUR){
+          etat = FINISH;
+        }
       }
     }
     break;
@@ -244,11 +293,19 @@ void TestComCarteARAL(){
       // Serial.println("VERIFICATION_BONNE_VOIE");
       EtatVoies voies;
       getTension(voies);
-      Serial.printf("Test de la voie %d, alarme %d", voieActuelle, alarmeActuelle);
+      Serial.printf("Test de la voie %2d, alarme %s", voieActuelle, alarmeText[alarmeActuelle]);
       if(voies.voies[voieActuelle-1] == alarmeActuelle){
-        Serial.println(" OKAY!");
+        if(bilan.voies[voieActuelle-1] != VOIE_EN_DEFAUT){
+          bilan.voies[voieActuelle-1] = VOIE_OK;
+          Serial.println(" OKAY!");
+        }
+        else{
+          // bilan.voies[voieActuelle-1] = false;
+          Serial.println(" Okay sur cette alarme mais sur d'autres alarmes non !");
+        }
       }else{
         Serial.println(" LA VOIE N'EST PAS BONNE!!");
+        bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
       }
       etat = SELECTION_DE_VOIE;
       etape = 1;
@@ -270,9 +327,37 @@ void TestComCarteARAL(){
       }  
     }
     break;
+    case FINISH:{
+      Serial.println("*************");
+      Serial.println("BILAN DE TEST");
+      Serial.printf("Nombre de tours durant le test : %d\n", nombreDeTours);
+      Serial.println("Affichage du bilan de test pour chaque voie : ");
+      Serial.println("");
+      for (int numVoie = 0; numVoie < 96; numVoie++)
+      {
+        Serial.printf("Voie (%2d) bilan : ", numVoie+1);
+        if(bilan.voies[numVoie] == VOIE_EN_DEFAUT){
+          Serial.println("DEFAUT!! Voie non fonctionnelle !");
+        }else if(bilan.voies[numVoie] == VOIE_OK){
+          Serial.println("OKAY!");
+        }
+        else{
+          Serial.println("Voie non testée ou bien bug");
+        }
+      }
+      Serial.println("");
+      Serial.println("*************");
+      etat = NONE;
+      return true;
+    }
+    break;
+    case NONE:{
+      return true;
+    }break;
     default:
       break;
   }
+  return false;
 }
 
 void TestContinueVoiesBoucleOuverte(){

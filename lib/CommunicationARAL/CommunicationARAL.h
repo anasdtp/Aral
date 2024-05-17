@@ -1,3 +1,5 @@
+#ifndef _CommunicationARAL_LIB
+#define _CommunicationARAL_LIB
 #include <Arduino.h>
 
 #define HEADER_DEBUT 0x02
@@ -108,7 +110,7 @@ ID_DIFINITIVE_SCUTATION :
 #define ETAT_NORMAL 0x30
 #define ETAT_CONGRUENCE 0x70
 
-#define TIMEOUT_ACK 5000 //ms
+#define TIMEOUT_ACK 10000 //ms
 
 #define SIZE_FIFO 32 //maximum 150 du fait du type char
 
@@ -170,3 +172,4 @@ private:
 };
 
 
+#endif //_CommunicationARAL_LIB

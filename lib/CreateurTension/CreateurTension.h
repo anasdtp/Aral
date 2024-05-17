@@ -1,3 +1,6 @@
+#ifndef _CreateurTension_LIB
+#define _CreateurTension_LIB
+
 #include <Arduino.h>
 
 typedef struct CreateurTensionBUS
@@ -27,4 +30,6 @@ private:
     void initOutput();
 };
 
+
+#endif //_CreateurTension_LIB
 
