@@ -1,6 +1,7 @@
 #ifndef _CommunicationARAL_LIB
 #define _CommunicationARAL_LIB
 #include <Arduino.h>
+#include <Commun.h>
 
 #define HEADER_DEBUT 0x02
 #define HEADER_FIN 0x03
@@ -112,29 +113,9 @@ ID_DIFINITIVE_SCUTATION :
 
 #define TIMEOUT_ACK 4000 //ms
 
-#define SIZE_FIFO 32 //maximum 150 du fait du type char
-
-
-typedef struct Message{
-    uint8_t id;
-    uint8_t len;
-    uint8_t *data;
-    // uint8_t checksum;
-}Message;
-
 typedef struct AlarmeVoies{
     uint8_t voies[96];
 }AlarmeVoies;
-
-// État de la réception
-enum StateRx{
-  WAITING_HEADER,
-  RECEIVING_ID,
-  RECEIVING_NB,
-  RECEIVING_DATA,
-  RECEIVING_CHECKSUM,
-  WAITING_FOOTER
-};
 
 typedef struct ManageACK{
   uint8_t id;
@@ -167,9 +148,18 @@ private:
     HardwareSerial *_serial;
     Message rxMsg[SIZE_FIFO]; int FIFO_ecriture;
 
+    // État de la réception
+    enum StateRx{
+      WAITING_HEADER,
+      RECEIVING_ID,
+      RECEIVING_NB,
+      RECEIVING_DATA,
+      RECEIVING_CHECKSUM,
+      WAITING_FOOTER
+    };
+
     void onReceiveFunction(void);
     bool MsgAvecBlocINFOS(uint8_t ID);
 };
-
 
 #endif //_CommunicationARAL_LIB

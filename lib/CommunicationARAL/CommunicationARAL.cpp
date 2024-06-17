@@ -34,17 +34,18 @@ void CommunicationARAL::onReceiveFunction(void) {
 
     static StateRx currentState = WAITING_HEADER;
     static uint8_t dataCounter = 0;
-    static uint8_t checksum = 0;
 
     while (availableData()) {
         uint8_t byte = readData();
+        
         //Serial.printf("%2X ",byte);
 
         switch (currentState) {
             case WAITING_HEADER:{
                 if (byte == HEADER_DEBUT) { // HEADER
                     currentState = RECEIVING_ID;
-                    checksum ^= byte;
+                    rxMsg[FIFO_ecriture].checksum = 0;
+                    rxMsg[FIFO_ecriture].checksum ^= byte;
                 }
                 }
                 break;
@@ -54,7 +55,7 @@ void CommunicationARAL::onReceiveFunction(void) {
                 rxMsg[FIFO_ecriture].len = 0;
                 if(MsgAvecBlocINFOS(rxMsg[FIFO_ecriture].id)){currentState = RECEIVING_NB;}
                 else{currentState = RECEIVING_CHECKSUM;}
-                checksum ^= byte;
+                rxMsg[FIFO_ecriture].checksum ^= byte;
                 }break;
 
             case RECEIVING_NB:{
@@ -67,23 +68,23 @@ void CommunicationARAL::onReceiveFunction(void) {
                 rxMsg[FIFO_ecriture].data = new uint8_t[rxMsg[FIFO_ecriture].len];//Allouée de la mémoire
                 currentState = RECEIVING_DATA;
                 dataCounter = 0;
-                checksum ^= byte;
+                rxMsg[FIFO_ecriture].checksum ^= byte;
                 }break;
 
             case RECEIVING_DATA:{
                 rxMsg[FIFO_ecriture].data[dataCounter++] = byte;
-                checksum ^= byte;//XOR
+                rxMsg[FIFO_ecriture].checksum ^= byte;//XOR
                 if (dataCounter >= rxMsg[FIFO_ecriture].len) {
                     currentState = RECEIVING_CHECKSUM;
                 }
                 }break;
 
             case RECEIVING_CHECKSUM:{
-                if (byte == checksum) {
+                if (byte == rxMsg[FIFO_ecriture].checksum) {
                     currentState = WAITING_FOOTER;
                 } else {
                     // Gérer l'erreur de checksum ici
-                    Serial.printf("CommunicationARAL::onReceiveFunction() : Erreur calcul checksum. checksum calculé : %d (int), checksum reçu : %d (int) \n", checksum, byte);
+                    // Serial.printf("CommunicationARAL::onReceiveFunction() : Erreur calcul checksum. checksum calculé : %d (int), checksum reçu : %d (int) \n", checksum, byte);
                     currentState = WAITING_HEADER;
                 }
                 }break;
@@ -95,7 +96,7 @@ void CommunicationARAL::onReceiveFunction(void) {
                     FIFO_ecriture = (FIFO_ecriture + 1) % SIZE_FIFO;
                 }
                 currentState = WAITING_HEADER;
-                checksum = 0;
+                rxMsg[FIFO_ecriture].checksum = 0;
                 // Serial.printf("delete[] rxMsg[FIFO_ecriture = %d].data;\n", FIFO_ecriture);
                 // delete[] rxMsg[FIFO_ecriture].data; // Libérer la mémoire allouée, pour les prochaines données
                 }break;
@@ -106,7 +107,6 @@ void CommunicationARAL::onReceiveFunction(void) {
 //Doit etre dans la loop
 void CommunicationARAL::RxManage(){
     static signed char FIFO_lecture = 0, FIFO_occupation = 0, FIFO_max_occupation = 0;
-
 
     FIFO_occupation = FIFO_ecriture - FIFO_lecture;
     if(FIFO_occupation<0){FIFO_occupation=FIFO_occupation+SIZE_FIFO;}
@@ -189,19 +189,20 @@ void CommunicationARAL::sendMsg(Message txMsg){
     packet[1] = txMsg.id;
     if(MsgAvecBlocINFOS(txMsg.id) == false){
         //Bloc sans INFOS
-        uint8_t checksum = packet[0] ^ packet[1];
-        packet[2] = checksum; //checksum
+        txMsg.checksum = packet[0] ^ packet[1];
+        packet[2] = txMsg.checksum; //checksum
         packet[3] = HEADER_FIN;
     }else{
         //Bloc avec INFOS
-        uint8_t checksum = packet[0] ^ packet[1], dataCounter = 2;
+        txMsg.checksum = packet[0] ^ packet[1];
+        uint8_t dataCounter = 2;
         for (int i = 0; i < txMsg.len; i++)
         {
            packet[dataCounter] = txMsg.data[i];
-           checksum ^= packet[dataCounter];
+           txMsg.checksum ^= packet[dataCounter];
            dataCounter++;
         }
-        packet[dataCounter++] = checksum; //checksum
+        packet[dataCounter++] = txMsg.checksum; //checksum
         packet[dataCounter] = HEADER_FIN;
     }
     // for (int i = 0; i < lenght; i++)
@@ -218,6 +219,8 @@ void CommunicationARAL::sendMsg(Message txMsg){
 //Sans bloc INFOS
 void CommunicationARAL::sendMsg(uint8_t id){
     Message txMsg = (Message){id, 0};
+    txMsg.data = new uint8_t[1];
+    txMsg.data[0] = 0;
     sendMsg(txMsg);
 }
 
@@ -346,7 +349,7 @@ bool CommunicationARAL::MsgAvecBlocINFOS(uint8_t ID){
 void CommunicationARAL::printMessage(Message msg){
       Serial.println ("*************************************************");
       Serial.println("Reception d'un nouveau message");
-      Serial.printf("ID : %2X", msg.id);
+      Serial.printf("ID : %2X, data[%d] = ", msg.id, msg.len);
       if(msg.len){
         //Serial.printf(", len : %d, data[%d] = ", msg.len, msg.len);
         for (int i = 0; i < msg.len; i++)
@@ -354,6 +357,7 @@ void CommunicationARAL::printMessage(Message msg){
             Serial.printf("[%2X] ", msg.data[i]);
         }
       }
-      Serial.println(".");
+      Serial.printf("\nchecksum : %2X.\n", msg.checksum);
+    //   Serial.println(".");
       Serial.println ("*************************************************");
 }

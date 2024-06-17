@@ -1,5 +1,4 @@
 #ifndef _IHM_LIB
-
 #define _IHM_LIB
 
 #include <Arduino.h>
@@ -33,6 +32,8 @@ void displayBilanTest(BilanTest voies);
 void printMidOLED(String text, int textSize, int y);
 void setLedColor(int numberOfLed, uint8_t couleur[3] = GREEN);
 void testLed();
+void rainbow(uint8_t waitms);
+void TransitionDelay(int waitms);
 
 void LedEtatProgramme(int etat);
 void LedAlarmeActuelle(Tension alarme);

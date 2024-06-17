@@ -172,11 +172,34 @@ void testLed(){
   delay(1000);     // 1 second off time
 }
 
+void rainbow(uint8_t waitms) {
+  static uint32_t start_time = 0; static long firstPixelHue = 0;
+  if((millis()-start_time)>waitms){
+    // Serial.println("yes");
+      start_time = millis();
+      WS2812B.rainbow(firstPixelHue, -1, 255, 100);
+      WS2812B.show();
+      firstPixelHue = (firstPixelHue + 256)%(3*65536);
+    //   vTaskDelay(pdMS_TO_TICKS(waitms));
+  }
+}
+
+void TransitionDelay(int waitms){
+  static uint32_t start_time = 0;
+  start_time = millis();
+  while((millis()-start_time)<waitms){
+    rainbow(10);
+  }
+}
+
+
 uint8_t GREEN[3] = {0, 255 / 2, 0};
 uint8_t BLUE[3] = {0, 0, 255 / 2};
 uint8_t RED[3] = {255 / 2, 0, 0};
 uint8_t WHITE[3] = {255 / 3, 255 / 3, 255 / 3};
 uint8_t BLACK[3] = {0, 0, 0};
+uint8_t PURPLE[3] = {238, 130/3, 238/2};
+
 
 uint8_t *EtatHuitLeds[NUM_PIXELS]={
   BLACK, //0 Etat du programme, Initialisation(vert), test en cours(bleu), test fini bilan(blanc)
@@ -224,7 +247,7 @@ void LedAlarmeActuelle(Tension alarme){
     EtatHuitLeds[1] = BLUE;
     break;
   case ALARME:
-    EtatHuitLeds[1] = RED;
+    EtatHuitLeds[1] = PURPLE;
     break;
   case NORMAL:
     EtatHuitLeds[1] = GREEN;
