@@ -1,7 +1,5 @@
 #include "General.h"
 
-
-
 General::General(CommunicationARAL *com, CommunicationPC *pc, SelectionDeLaVoie *voie, CreateurTension *alarme)
 {
     _alarme = alarme;
@@ -28,7 +26,6 @@ void General::run(){
 
     txLoop();
 }
-
 
 void General::selectionVoie(Tension alarme, uint8_t voie){//de 1 à 96
   if(voie > 96 || voie==0){
@@ -79,8 +76,6 @@ void General::getTension(EtatVoies &voies, bool affichage){
   if(affichage){Serial.println("");}
 }
 
-
-
 void General::txLoop(){
   static BilanTest bilan;
   switch (etat_gen)
@@ -112,24 +107,31 @@ void General::txLoop(){
   case TEST_VOIES:
   {
     if(TestComCarteARAL(bilan)){
-       LedBilanTest(bilan);
+      LedBilanTest(bilan);
       etat_gen = BILAN;
       LedEtatProgramme(2);
     }
+    _pc->getRestartTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un reset alors qu'on est deja entrain de faire un test
+    if(_pc->getStopTestRequest()){
+      etat_gen = BILAN;
+    }
   }
-    break;
+  break;
   case BILAN:
   {
     displayBilanTest(bilan);
     rainbow(20);
+    if(_pc->getRestartTestRequest()){
+      etat_gen = TEST_VOIES;
+    }
+    _pc->getStopTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un stop alors qu'on est deja au bilan
   }
-    break;
+  break;
   default:
     etat_gen = INIT_COM;
     break;
   }
 }
-
 
 bool General::initialisationARAL(){
   static const AralState etat_init[4] = {RESET, PREMIERE_SCRUTATION, CHECK_CAPTEURS, DIFINITIVE_SCRUTATION};
@@ -154,7 +156,12 @@ bool General::initialisationARAL(){
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
       startTimeVoie = millis();
-      _pc->sendMsg(ID_INITIALISATION_ARAL_EN_COURS, (uint8_t)nb_essais);//Test
+      _pc->sendMsg(ID_INITIALISATION_ARAL_EN_COURS, (uint8_t)nb_essais);//Envoi de l'info au pc qu'on est entrain d'initialiser l'aral et le nombre de tentative
+      {
+        static EtatVoies voies; static Tension ten[4] = {COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE}; static int i = 0;
+        voies.voies[0] = ten[(i++)%4];  voies.voies[1] = ten[(i++)%4]; voies.voies[2] = ten[(i++)%4]; voies.voies[3] = ten[(i++)%4];
+        _pc->sendMsg(ID_ETAT_VOIES, voies); 
+      }//Test
     }
     break;
     case PREMIERE_SCRUTATION:{
@@ -226,6 +233,7 @@ bool General::initialisationARAL(){
       //Serial.println("Communication carte ARAL Fonctionnelle !");
       EtatVoies voies;
       getTension(voies);
+      _pc->sendMsg(ID_ETAT_VOIES, voies);
       setLedColor(1);//NUM_PIXELS);
       LedEtatProgramme(0);
       etat = NONE;
@@ -324,6 +332,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       // //Serial.println("VERIFICATION_BONNE_VOIE");
       EtatVoies voies;
       getTension(voies);
+      _pc->sendMsg(ID_ETAT_VOIES, voies);
       //Serial.printf("Test de la voie %2d, alarme %s", voieActuelle, alarmeText[alarmeActuelle]);
       if(voies.voies[voieActuelle-1] == alarmeActuelle){
         if(bilan.voies[voieActuelle-1] != VOIE_EN_DEFAUT){
@@ -363,7 +372,15 @@ bool General::TestComCarteARAL(BilanTest &bilan){
         _com->sendMsg(_com->ACK.id);
         setLedColor(NUM_PIXELS, BLUE);
         printMidOLED("La carte ARAL demande une repetition du dernier message...", 1, 1);
-      }  
+      }
+      else if((millis() - startTimeVoie)> TIMEOUT_ACK){
+        startTimeVoie = millis();
+        //Serial.println("La carte ARAL ne repond pas !");
+        //Serial.println("Commande RESET ARAL...");
+        printMidOLED("La carte ARAL \n ne repond pas ! \n Verifier les connexions", 1, 1);
+        setLedColor(NUM_PIXELS, BLUE);
+        _com->sendMsg(_com->ACK.id);
+      }
     }
     break;
     case FINISH:{
@@ -388,7 +405,10 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       //Serial.println("*************");
 
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
-      etat = NONE;
+      nbToursFait = 0;
+      _numAlarme = 0;
+      voieActuelle = 0;
+      etat = SELECTION_DE_VOIE;
       return true;
     }
     break;
@@ -521,4 +541,3 @@ bool General::ControleParMoniteurSerie(){
   }
   return false;
 }
-

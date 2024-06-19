@@ -40,7 +40,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="sendButton_nbTours_2">
+         <widget class="QPushButton" name="sendButton_arret">
           <property name="text">
            <string>Send</string>
           </property>
@@ -58,7 +58,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QPushButton" name="sendButton_nbTours_3">
+         <widget class="QPushButton" name="sendButton_repriseTest">
           <property name="text">
            <string>Send</string>
           </property>
@@ -171,8 +171,20 @@
      <height>25</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuFichiers">
+    <property name="title">
+     <string>Fichiers</string>
+    </property>
+    <addaction name="actionTableau_Voies_Bilan"/>
+   </widget>
+   <addaction name="menuFichiers"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionTableau_Voies_Bilan">
+   <property name="text">
+    <string>Tableau Voies Bilan</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

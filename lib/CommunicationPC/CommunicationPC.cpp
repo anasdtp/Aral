@@ -32,6 +32,9 @@ void CommunicationPC::begin(HardwareSerial *srl, long baud, String nameBT){
     beginComBT(nameBT);
     _serial->onReceive(std::bind(&CommunicationPC::onReceiveFunction, this));
     _serialBT->register_callback(onReceiveFunctionBTStatic);
+
+    setNombreTours(1);
+    _resetTestRequest = false; _StopTestRequest = false;
 }
 
 void CommunicationPC::end()
@@ -213,6 +216,20 @@ void CommunicationPC::RxManage(){
             sendMsg(ID_ACK_NB_TOURS);
         }break;
 
+        case ID_RELANCER_TEST:{
+            _resetTestRequest = true;
+            printMidOLED(("Relancement du test"), 2, 1);
+
+            sendMsg(ID_ACK_GENERAL);
+        }break;
+
+        case ID_ARRET_TEST:{
+            _StopTestRequest = true;
+            printMidOLED(("Arret du test"), 2, 1);
+
+            sendMsg(ID_ACK_GENERAL);
+        }break;
+
         default:
             sendMsg(ID_ACK_GENERAL);
             break;
@@ -242,7 +259,7 @@ void CommunicationPC::sendMsg(Message txMsg){
         txMsg.checksum ^= packet[dataCounter];
         dataCounter++;
     }
-    if(!txMsg.len){dataCounter++;}
+    if(!txMsg.len){packet[dataCounter] = 0; dataCounter++;}
     packet[dataCounter++] = txMsg.checksum; // checksum
     packet[dataCounter] = 0xFF;//Header
     
@@ -301,6 +318,15 @@ void CommunicationPC::sendMsg(uint8_t id, BilanTest &bilan){
     memcpy(data, bilan.voies, len);
     sendMsg(id, len, data);
 }
+
+void CommunicationPC::sendMsg(uint8_t id, EtatVoies &voies){
+    const uint8_t len = 96;
+    uint8_t data[len];
+    memcpy(data, voies.voies, len);
+    sendMsg(id, len, data);
+}
+
+
 
 
 void CommunicationPC::printMessage(Message msg){

@@ -11,19 +11,23 @@
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
 from PySide6.QtWidgets import (QApplication, QComboBox, QHBoxLayout, QLabel,
-    QMainWindow, QMenuBar, QPushButton, QSizePolicy,
-    QStatusBar, QTextEdit, QVBoxLayout, QWidget)
+    QMainWindow, QMenu, QMenuBar, QPushButton,
+    QSizePolicy, QStatusBar, QTextEdit, QVBoxLayout,
+    QWidget)
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(800, 384)
+        self.actionTableau_Voies_Bilan = QAction(MainWindow)
+        self.actionTableau_Voies_Bilan.setObjectName(u"actionTableau_Voies_Bilan")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout = QVBoxLayout(self.centralwidget)
@@ -48,10 +52,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addWidget(self.label_2)
 
-        self.sendButton_nbTours_2 = QPushButton(self.centralwidget)
-        self.sendButton_nbTours_2.setObjectName(u"sendButton_nbTours_2")
+        self.sendButton_arret = QPushButton(self.centralwidget)
+        self.sendButton_arret.setObjectName(u"sendButton_arret")
 
-        self.horizontalLayout_2.addWidget(self.sendButton_nbTours_2)
+        self.horizontalLayout_2.addWidget(self.sendButton_arret)
 
 
         self.horizontalLayout_4.addLayout(self.horizontalLayout_2)
@@ -63,10 +67,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addWidget(self.label_3)
 
-        self.sendButton_nbTours_3 = QPushButton(self.centralwidget)
-        self.sendButton_nbTours_3.setObjectName(u"sendButton_nbTours_3")
+        self.sendButton_repriseTest = QPushButton(self.centralwidget)
+        self.sendButton_repriseTest.setObjectName(u"sendButton_repriseTest")
 
-        self.horizontalLayout_3.addWidget(self.sendButton_nbTours_3)
+        self.horizontalLayout_3.addWidget(self.sendButton_repriseTest)
 
 
         self.horizontalLayout_4.addLayout(self.horizontalLayout_3)
@@ -112,10 +116,15 @@ class Ui_MainWindow(object):
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 800, 25))
+        self.menuFichiers = QMenu(self.menubar)
+        self.menuFichiers.setObjectName(u"menuFichiers")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
+        self.menubar.addAction(self.menuFichiers.menuAction())
+        self.menuFichiers.addAction(self.actionTableau_Voies_Bilan)
 
         self.retranslateUi(MainWindow)
 
@@ -124,11 +133,12 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.actionTableau_Voies_Bilan.setText(QCoreApplication.translate("MainWindow", u"Tableau Voies Bilan", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"Banc de Test Carte ARAL", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"ARRET / Affichage du Bilan", None))
-        self.sendButton_nbTours_2.setText(QCoreApplication.translate("MainWindow", u"Send", None))
+        self.sendButton_arret.setText(QCoreApplication.translate("MainWindow", u"Send", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"Commencer / Reprise du test en boucle", None))
-        self.sendButton_nbTours_3.setText(QCoreApplication.translate("MainWindow", u"Send", None))
+        self.sendButton_repriseTest.setText(QCoreApplication.translate("MainWindow", u"Send", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"Nombre de tours de tests", None))
         self.comboBox_nbTours.setItemText(0, QCoreApplication.translate("MainWindow", u"1", None))
         self.comboBox_nbTours.setItemText(1, QCoreApplication.translate("MainWindow", u"2", None))
@@ -146,5 +156,6 @@ class Ui_MainWindow(object):
         self.comboBox_nbTours.setItemText(13, QCoreApplication.translate("MainWindow", u"500", None))
 
         self.sendButton_nbTours.setText(QCoreApplication.translate("MainWindow", u"Send", None))
+        self.menuFichiers.setTitle(QCoreApplication.translate("MainWindow", u"Fichiers", None))
     # retranslateUi
 
