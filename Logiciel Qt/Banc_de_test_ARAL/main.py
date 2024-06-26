@@ -1,7 +1,7 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit, QDialog, QVBoxLayout, QTableWidgetItem, QPushButton, QTableWidget
 from PySide6.QtCore import QThread, Signal, Slot, QTimer
-from PySide6.QtGui import QColor
+from PySide6.QtGui import QColor, QBrush
 import serial
 import serial.tools.list_ports
 import struct
@@ -26,6 +26,8 @@ ID_ACK_GENERAL      = 0xC0
 ID_RELANCER_TEST    = 0xC1
 ID_ARRET_TEST       = 0xC2
 ID_REPEAT_REQUEST   = 0xD0
+ID_REQUEST_NB_TOURS_FAIT = 0xD1
+ID_ACK_REQUEST_NB_TOURS_FAIT = 0xD2
 
 class Message():
     def __init__(self, id=0, length=0, data=None, checksum=0):
@@ -39,8 +41,9 @@ class Message():
         self.checksum = (self.id ^ self.len) & 0xFF
         for i in range(self.len):
             self.checksum ^= self.data[i]
+        length = self.len if(self.len) else 1
         # Construct the packet with start marker, ID, length, data, checksum, and end marker
-        packet_format = f'<B B B {self.len}s B B'
+        packet_format = f'<B B B {length}s B B'
         packet_data = bytes(self.data)
         return struct.pack(packet_format, 0xFF, self.id, self.len, packet_data, self.checksum, 0xFF)
 
@@ -211,7 +214,8 @@ class MainWindow(QMainWindow):
                 self.state_window.show()
             case 0xB4:#ID_ETAT_VOIES
                 voies.voies = com.rxMsg[self.FIFO_lecture].data
-                self.ui.textEdit_panel.append(f"ID_ETAT_VOIES : etat voies : " + str(voies.bilan))
+                self.ui.textEdit_panel.append(f"ID_ETAT_VOIES : etat voies : " + str(voies.voies))
+                self.state_window.update_states()
             case 0xC0:#ID_ACK_GENERAL
                 self.ui.textEdit_panel.append(f"ID_ACK_GENERAL : reponse gen")
             case 0xD0:#ID_REPEAT_REQUEST
@@ -297,14 +301,29 @@ class StateWindow(QDialog):
         for i in range(10):
             for j in range(10):
                 index = i * 10 + j
-                print("j : " + str(j) + " i : " + str(i) + " index : " + str(index))
+                # print("j : " + str(j) + " i : " + str(i) + " index : " + str(index))
                 if(index>=96):
                     return
                 item = QTableWidgetItem()
-                if voies.voies[index] == etatBilan["OK"]:
-                    item.setBackground(QColor("green"))
-                else:
+                if voies.bilan[index] == etatBilan["OK"]:
+                    item.setBackground(QColor("darkGreen"))
+                elif voies.bilan[index] == etatBilan["DEFAUT"]:
                     item.setBackground(QColor("red"))
+                else:
+                    item.setBackground(QColor("gray"))
+
+                if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
+                    item.setText('Court-Circuit')
+                    item.setBackground(QColor("cyan"))
+                elif voies.voies[index] == etatVoies["ALARME"]:
+                    item.setText('Alarme')
+                    item.setBackground(QColor("darkMagenta"))
+                elif voies.voies[index] == etatVoies["NORMAL"]:
+                    item.setText('Normal')
+                    item.setBackground(QColor("green"))
+                elif voies.voies[index] == etatVoies["CONGRUENCE"]:
+                    item.setText('Congruence')
+
                 self.ui.tableWidget.setItem(i, j, item)
 
 def main():

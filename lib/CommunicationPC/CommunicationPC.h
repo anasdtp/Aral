@@ -18,6 +18,9 @@
 #define ID_ARRET_TEST 0xC2
 #define ID_REPEAT_REQUEST 0xD0
 
+#define ID_REQUEST_NB_TOURS_FAIT 0xD1
+#define ID_ACK_REQUEST_NB_TOURS_FAIT 0xD2
+
 class CommunicationPC
 {
 public:
@@ -57,12 +60,20 @@ public:
       return false;
     }
 
+    bool getNbToursFaitRequest(bool afterCheck = false){
+      if(_NbToursFaitRequest){
+        _NbToursFaitRequest = afterCheck;
+        return true;
+      }
+      return false;
+    }
+
 private:
     HardwareSerial *_serial;
     BluetoothSerial *_serialBT;
     Message rxMsg[SIZE_FIFO]; int FIFO_ecriture;
 
-    uint16_t NBTOURS; bool _resetTestRequest, _StopTestRequest;
+    uint16_t NBTOURS; bool _resetTestRequest, _StopTestRequest, _NbToursFaitRequest;
 
     // État de la réception
     enum StateRx{

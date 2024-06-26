@@ -112,6 +112,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
+        self.pushButton = QPushButton(self.centralwidget)
+        self.pushButton.setObjectName(u"pushButton")
+
+        self.verticalLayout.addWidget(self.pushButton)
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -156,6 +161,7 @@ class Ui_MainWindow(object):
         self.comboBox_nbTours.setItemText(13, QCoreApplication.translate("MainWindow", u"500", None))
 
         self.sendButton_nbTours.setText(QCoreApplication.translate("MainWindow", u"Send", None))
+        self.pushButton.setText(QCoreApplication.translate("MainWindow", u"PushButton", None))
         self.menuFichiers.setTitle(QCoreApplication.translate("MainWindow", u"Fichiers", None))
     # retranslateUi
 

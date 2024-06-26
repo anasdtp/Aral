@@ -312,6 +312,7 @@ void CommunicationPC::sendMsg(uint8_t id, uint32_t nb){
     sendMsg(id, len, data);
 }
 
+//Envoi du tableau voies du bilan
 void CommunicationPC::sendMsg(uint8_t id, BilanTest &bilan){
     const uint8_t len = 96;
     uint8_t data[len];
@@ -321,13 +322,15 @@ void CommunicationPC::sendMsg(uint8_t id, BilanTest &bilan){
 
 void CommunicationPC::sendMsg(uint8_t id, EtatVoies &voies){
     const uint8_t len = 96;
-    uint8_t data[len];
-    memcpy(data, voies.voies, len);
+    uint8_t data[len], v[len];
+    for (int i = 0; i < 96; i++)
+    {
+        v[i] = uint8_t(voies.voies[i]);
+    }
+    
+    memcpy(data, (v), len);
     sendMsg(id, len, data);
 }
-
-
-
 
 void CommunicationPC::printMessage(Message msg){
       Serial.println ("*************************************************");

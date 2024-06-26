@@ -9,11 +9,11 @@ typedef struct CreateurTensionBUS
 }CreateurTensionBUS;
 
 enum Tension{
-    COURT_CIRCUIT = 0,//0V  //00
-    ALARME = 1,//3.3V       //01
-    NORMAL = 2,//6V         //10
-    CONGRUENCE = 3,//15V     //11
-    BOUCLE_OUVERTE = 4
+    COURT_CIRCUIT   = 0,//0V  //00
+    ALARME          = 1,//3.3V       //01
+    NORMAL          = 2,//6V         //10
+    CONGRUENCE      = 3,//15V     //11
+    BOUCLE_OUVERTE  = 4
 };
 
 class CreateurTension
@@ -30,6 +30,4 @@ private:
     void initOutput();
 };
 
-
 #endif //_CreateurTension_LIB
-

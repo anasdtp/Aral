@@ -5,6 +5,7 @@
 #include <SelectionDeLaVoie.h>
 
 
+
 typedef struct EtatVoies{
     Tension voies[96];
 }EtatVoies;
@@ -14,6 +15,7 @@ typedef struct EtatVoies{
 #define VOIE_NONE 0
 typedef struct BilanTest{
   uint8_t voies[96]; //Si VOIE_OK, voie fonctionnelle, si VOIE_EN_DEFAUT voie HS
+  int nbToursFait;
 }BilanTest;
 
 

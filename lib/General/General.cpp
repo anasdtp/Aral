@@ -10,7 +10,6 @@ General::General(CommunicationARAL *com, CommunicationPC *pc, SelectionDeLaVoie 
     etat_gen = INIT_COM;
     
     _pc->setNombreTours(1);
-    nbToursFait = 0;
 }
 
 void General::IHMBegin()
@@ -88,7 +87,7 @@ void General::txLoop(){
       initDone = true;
       //Serial.println("Communication carte ARAL initialisée !");
       _pc->sendMsg(ID_INITIALISATION_ARAL_FAITE);
-
+      nbToursFait = 0;
     }
 
     //Test Bilan a commenté: 
@@ -107,14 +106,16 @@ void General::txLoop(){
   case TEST_VOIES:
   {
     if(TestComCarteARAL(bilan)){
-      LedBilanTest(bilan);
+      // LedBilanTest(bilan);
       etat_gen = BILAN;
-      LedEtatProgramme(2);
+      // LedEtatProgramme(2);
+    }
+    else if(_pc->getStopTestRequest()){
+      etat_gen = BILAN;
+      _pc->sendMsg(ID_TEST_TERMINEE, bilan);
+      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, nbToursFait);
     }
     _pc->getRestartTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un reset alors qu'on est deja entrain de faire un test
-    if(_pc->getStopTestRequest()){
-      etat_gen = BILAN;
-    }
   }
   break;
   case BILAN:
@@ -123,6 +124,11 @@ void General::txLoop(){
     rainbow(20);
     if(_pc->getRestartTestRequest()){
       etat_gen = TEST_VOIES;
+      for (int i = 0; i < 96; i++)
+      {
+        bilan.voies[i] = VOIE_NONE;//Remise à 0 du bilan
+      }
+      
     }
     _pc->getStopTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un stop alors qu'on est deja au bilan
   }
@@ -131,6 +137,11 @@ void General::txLoop(){
     etat_gen = INIT_COM;
     break;
   }
+
+  if(_pc->getNbToursFaitRequest()){
+    _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, nbToursFait);
+  }
+
 }
 
 bool General::initialisationARAL(){
@@ -157,11 +168,11 @@ bool General::initialisationARAL(){
       etat = ATT_ACK;
       startTimeVoie = millis();
       _pc->sendMsg(ID_INITIALISATION_ARAL_EN_COURS, (uint8_t)nb_essais);//Envoi de l'info au pc qu'on est entrain d'initialiser l'aral et le nombre de tentative
-      {
-        static EtatVoies voies; static Tension ten[4] = {COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE}; static int i = 0;
-        voies.voies[0] = ten[(i++)%4];  voies.voies[1] = ten[(i++)%4]; voies.voies[2] = ten[(i++)%4]; voies.voies[3] = ten[(i++)%4];
-        _pc->sendMsg(ID_ETAT_VOIES, voies); 
-      }//Test
+      // {
+      //   static EtatVoies voies; static Tension ten[4] = {COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE}; static int i = 0;
+      //   voies.voies[0] = ten[(i++)%4];  voies.voies[1] = ten[(i++)%4]; voies.voies[2] = ten[(i++)%4]; voies.voies[3] = ten[(i++)%4];
+      //   _pc->sendMsg(ID_ETAT_VOIES, voies); 
+      // }//Test
     }
     break;
     case PREMIERE_SCRUTATION:{
@@ -405,9 +416,11 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       //Serial.println("*************");
 
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
+      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, nbToursFait);
       nbToursFait = 0;
       _numAlarme = 0;
-      voieActuelle = 0;
+      voieActuelle = 1;
+
       etat = SELECTION_DE_VOIE;
       return true;
     }
