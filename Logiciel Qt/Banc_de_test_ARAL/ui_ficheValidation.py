@@ -17,14 +17,14 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QCheckBox, QComboBox,
     QDialog, QDialogButtonBox, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QSizePolicy, QTextEdit,
-    QVBoxLayout, QWidget)
+    QLineEdit, QPushButton, QSizePolicy, QVBoxLayout,
+    QWidget)
 
 class Ui_FicheValidation(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(492, 394)
+        Dialog.resize(492, 267)
         self.verticalLayout = QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.checkBox_prise_en_compte_test = QCheckBox(Dialog)
@@ -34,11 +34,6 @@ class Ui_FicheValidation(object):
         self.checkBox_prise_en_compte_test.setChecked(True)
 
         self.verticalLayout.addWidget(self.checkBox_prise_en_compte_test)
-
-        self.textEdit = QTextEdit(Dialog)
-        self.textEdit.setObjectName(u"textEdit")
-
-        self.verticalLayout.addWidget(self.textEdit)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")

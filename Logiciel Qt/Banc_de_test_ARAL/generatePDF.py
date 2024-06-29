@@ -19,12 +19,6 @@ CommentaireCarteMinimal = """
 • Mesure et vérification des tensions appliqués sur la carte.
 • Vérification de l’émission / réception.
 """
-def get_current_date_string():
-    # Obtenir la date actuelle
-    current_date = datetime.now()
-    # Formater la date au format "dd/mm/yyyy"
-    date_string = current_date.strftime("%d/%m/%Y")
-    return date_string
 
 def get_drive_letter():
     drive_letter = os.getenv('SYSTEMDRIVE')
@@ -54,6 +48,38 @@ def ensure_directory_exists(directory_path):
 # Exemple d'utilisation pour votre cas spécifique
 output_directory = DRIVELETTER + '/Users/' + USERNAME + '/AppData/Local/BancDeTestAral/outputPDF'
 ensure_directory_exists(output_directory)
+
+def get_current_date_string():
+    # Obtenir la date actuelle
+    current_date = datetime.now()
+    # Formater la date au format "dd/mm/yyyy"
+    date_string = current_date.strftime("%d/%m/%Y")
+    return date_string
+
+# Fonction pour générer un numéro de série
+def generer_numero_serie(prefixe, filePath = output_directory + '/compteurNumSerie.json'):
+    try:
+        with open(filePath, "r") as file:
+            items = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        items = [1]
+
+    # Obtenir la date actuelle
+    maintenant = datetime.now()
+    mois = maintenant.strftime("%m")
+    annee = maintenant.strftime("%Y")
+    
+    # Formater le numéro avec 4 chiffres significatif
+    compteur = f"{items[0]:04d}"
+    
+    # Créer le numéro de série
+    numero_serie = f"{prefixe}{compteur} {mois}-{annee}"
+
+    items[0] = (items[0]+1)%9999
+
+    with open(filePath, "w") as file:
+        json.dump(items, file)
+    return numero_serie
 
 def createPDFText(text, x, y, interligne = 40):
         # writer = PdfWriter()
@@ -123,7 +149,6 @@ class FicheValidation():
             
         pdf = createPDFText(Date, 480, 87)
         new_pdf.append(pdf)
-        
         
         with open('PDF/fiche_validation_aral_vierge.pdf', "rb") as input_file:
             reader = PdfReader(input_file)

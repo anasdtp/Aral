@@ -16,15 +16,13 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QDialog, QHeaderView, QSizePolicy,
-    QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
+    QTableWidget, QTableWidgetItem, QWidget)
 
 class Ui_tableauVoies(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(1332, 418)
-        self.verticalLayout = QVBoxLayout(Dialog)
-        self.verticalLayout.setObjectName(u"verticalLayout")
+        Dialog.resize(1325, 416)
         self.tableWidget = QTableWidget(Dialog)
         if (self.tableWidget.columnCount() < 10):
             self.tableWidget.setColumnCount(10)
@@ -73,9 +71,7 @@ class Ui_tableauVoies(object):
         __qtablewidgetitem20 = QTableWidgetItem()
         self.tableWidget.setItem(0, 0, __qtablewidgetitem20)
         self.tableWidget.setObjectName(u"tableWidget")
-
-        self.verticalLayout.addWidget(self.tableWidget)
-
+        self.tableWidget.setGeometry(QRect(11, 11, 1311, 411))
 
         self.retranslateUi(Dialog)
 

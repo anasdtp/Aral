@@ -10,7 +10,6 @@ import json
 from ui_mainwindow import Ui_MainWindow
 from ui_dialog import Ui_Dialog
 from ui_tableauVoies import Ui_tableauVoies
-from ui_tableauVoiesEnCours import Ui_TableauVoiesEnCours
 import generatePDF
 from ui_ficheValidation import Ui_FicheValidation
 from ui_ajoutControleur import Ui_AjoutControleur
@@ -19,7 +18,6 @@ from ui_ajoutControleur import Ui_AjoutControleur
 #   pyside6-uic mainwindow.ui -o ui_mainwindow.py
 #   pyside6-uic dialog.ui -o ui_dialog.py
 #   pyside6-uic tableauBilan.ui -o ui_tableauVoies.py
-#   pyside6-uic tableauVoiesEnCours.ui -o ui_tableauVoiesEnCours.py
 #   pyside6-uic ficheValidation.ui -o ui_ficheValidation.py
 #   pyside6-uic ajoutControleur.ui -o ui_ajoutControleur.py
 
@@ -70,7 +68,7 @@ com = COMMUNICATION()
 NOMBRE_VOIES = 96
 
 etatBilan = {
-    "none" : 0,
+    "test non fait" : 0,
     "OK" : 0x30,
     "DEFAUT" : 0x10,
 }
@@ -83,7 +81,7 @@ etatVoies = {
 class VOIE():
     def __init__(self):
         self.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
-        self.bilan = [etatBilan["none"] for _ in range(NOMBRE_VOIES)]
+        self.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
 voies = VOIE()
 
 class SerialThread(QThread):
@@ -408,7 +406,7 @@ class BilanWindow(QDialog):
 class StateWindow(QDialog):
     def __init__(self):
         super().__init__()
-        self.ui = Ui_TableauVoiesEnCours()
+        self.ui = Ui_tableauVoies()
         self.ui.setupUi(self)
         self.update_states()
         self.setWindowTitle("Etat Voies en Cours, envoyé par la carte ARAL")
@@ -435,9 +433,10 @@ class StateWindow(QDialog):
                 elif voies.voies[index] == etatVoies["CONGRUENCE"]:
                     item.setText('Congruence')
                     item.setBackground(QColor("gray"))
+                
+
 
                 self.ui.tableWidget.setItem(i, j, item)
-
 
 class donneesFiche():
     def __init__(self):
@@ -458,6 +457,7 @@ class FicheValidation(QDialog):
         self.ui.buttonBox.rejected.connect(self.reject)
         self.ui.pushButton_controleur_technique_ajout.clicked.connect(self.addControleurTechnique)
         self.ui.pushButton_controleur_externe_ajout.clicked.connect(self.addControleurExterne)
+        self.ui.pushButton_num_serie_generer_auto.clicked.connect(self.genererNumSerie)
         self.init_controleurs_comboBox()
 
         self.ui.lineEdit_num_serie.setText(donnees.numSerie)
@@ -482,29 +482,23 @@ class FicheValidation(QDialog):
             print("PDF/controleur_externe.json error or not found")
             # pass  # No items to load or file is empty
 
+    def genererNumSerie(self):
+        donnees.numSerie = generatePDF.generer_numero_serie("172")
+        self.ui.lineEdit_num_serie.setText(donnees.numSerie)
+
     def regrouper_voies_par_etat(self, bilan):
         groupes = []
         debut = 0
         etat_actuel = bilan[0]
-        
         for i in range(1, len(bilan)):
             if bilan[i] != etat_actuel:
                 groupes.append((debut, i - 1, etat_actuel))
                 debut = i
                 etat_actuel = bilan[i]
         groupes.append((debut, len(bilan) - 1, etat_actuel))
-        
         return groupes
-    
-    def getCommentaires(self):
-        voies.bilan[34] = etatBilan["DEFAUT"]
-        voies.bilan[35] = etatBilan["DEFAUT"]
-        voies.bilan[36] = etatBilan["DEFAUT"]
-        voies.bilan[37] = etatBilan["OK"]
-        voies.bilan[38] = etatBilan["OK"]
-        voies.bilan[88] = etatBilan["OK"]
-        voies.bilan[89] = etatBilan["OK"]
-        
+
+    def getCommentaires(self):        
         if self.ui.checkBox_prise_en_compte_test.isChecked():
             if all(bilan == etatBilan["OK"] for bilan in voies.bilan):
                 return generatePDF.CommentaireCarteFonctionnelle
