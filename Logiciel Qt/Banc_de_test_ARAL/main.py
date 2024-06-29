@@ -5,13 +5,25 @@ from PySide6.QtGui import QColor, QBrush
 import serial
 import serial.tools.list_ports
 import struct
+import json
 # import time
-from ui_dialog import Ui_Dialog
 from ui_mainwindow import Ui_MainWindow
+from ui_dialog import Ui_Dialog
 from ui_tableauVoies import Ui_tableauVoies
+from ui_tableauVoiesEnCours import Ui_TableauVoiesEnCours
+import generatePDF
+from ui_ficheValidation import Ui_FicheValidation
+from ui_ajoutControleur import Ui_AjoutControleur
+#Pour actualiser : 
+#   pyside6-rcc -o Ressources_rc.py Ressources.qrc
+#   pyside6-uic mainwindow.ui -o ui_mainwindow.py
+#   pyside6-uic dialog.ui -o ui_dialog.py
+#   pyside6-uic tableauBilan.ui -o ui_tableauVoies.py
+#   pyside6-uic tableauVoiesEnCours.ui -o ui_tableauVoiesEnCours.py
+#   pyside6-uic ficheValidation.ui -o ui_ficheValidation.py
+#   pyside6-uic ajoutControleur.ui -o ui_ajoutControleur.py
 
 SERIAL_BAUDRATE = 921600
-
 
 ID_NB_TOURS     = 0xA0 #On envoi le nombre de tours à faire sur 2 octets
 ID_ACK_NB_TOURS = 0xA1 #RIEN
@@ -76,12 +88,18 @@ voies = VOIE()
 
 class SerialThread(QThread):
     # message_received = Signal(bytes)
-    def __init__(self, port, baudrate):
+    def __init__(self, port = None, baudrate = None):
         super().__init__()
-        self.port = port
-        self.baudrate = baudrate
-        self.serial = serial.Serial(port, baudrate)
-        self.running = True
+        if port is not None:
+            self.port = port
+            self.baudrate = baudrate
+            self.serial = serial.Serial(port, baudrate)
+            self.running = True
+        else:
+            self.port = None
+            self.baudrate = None
+            self.serial = None
+            self.running = False
 
         self.stateRx = 0
         self.compteurData = 0
@@ -101,8 +119,18 @@ class SerialThread(QThread):
                 # self.serial.write(packet)
 
     def close(self):
-        self.running = False
-        self.serial.close()
+        if self.running:
+            self.running = False
+            self.serial.close()
+    
+    def send_data(self, data):
+        if self.running:
+            try:
+                self.serial.write(data)
+            except serial.SerialException as e:
+                print(f"Failed to send data: {e}")
+                self.close()
+                self.running = False
 
     # @Slot(bytes)
     def RxReceive(self, message):
@@ -157,6 +185,8 @@ class SerialThread(QThread):
                     com.FIFO_Ecriture = (com.FIFO_Ecriture + 1)%SIZE_FIFO
                 print(self.msgError)
                 self.stateRx = 0
+
+com.serial_thread = SerialThread()
 #end SerialThread
 
 class MainWindow(QMainWindow):
@@ -169,8 +199,20 @@ class MainWindow(QMainWindow):
         self.ui.sendButton_repriseTest.clicked.connect(self.sendRelancerTest)
         self.ui.sendButton_arret.clicked.connect(self.sendArretTest)
 
+        self.dialog = Dialog()
+        self.bilan_window = BilanWindow()
         self.state_window = StateWindow()
-        self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openStateWindow)
+        self.fiche_validation = FicheValidation()
+        self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openBilanWindow)
+        self.ui.actionTableau_Voies_en_Cours.triggered.connect(self.openStateWindow)
+        self.ui.actionFicheValidation.triggered.connect(self.openFicheValidation)
+
+        self.ui.actionQuit.triggered.connect(self.QuitWindows)
+        self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
+        self.ui.actionConnect.triggered.connect(self.openDialogWindow)
+        self.ui.actionDisconnect.triggered.connect(self.closeSerial)
+
+        self.ui.sendButton_lancementTestNuit.clicked.connect(self.send128Tours)
         print("Initialized MainWindow")
 
         # Configuration du QTimer
@@ -181,6 +223,7 @@ class MainWindow(QMainWindow):
         self.FIFO_occupation = 0
         self.FIFO_max_occupation = 0
         print("End Initialization MainWindow")
+        
 
     def RxManage(self):
         # print("RxManage")
@@ -206,12 +249,12 @@ class MainWindow(QMainWindow):
             case 0xB2:#ID_TEST_EN_COURS
                 voies.bilan = com.rxMsg[self.FIFO_lecture].data
                 self.ui.textEdit_panel.append(f"ID_TEST_EN_COURS : bilan : " + str(voies.bilan))
-                self.state_window.update_states()
+                self.bilan_window.update_states()
             case 0xB3:#ID_TEST_TERMINEE
                 voies.bilan = com.rxMsg[self.FIFO_lecture].data
                 self.ui.textEdit_panel.append(f"ID_TEST_TERMINEE : bilan : " + str(voies.bilan))
-                self.state_window.update_states()
-                self.state_window.show()
+                self.bilan_window.update_states()
+                self.bilan_window.show()
             case 0xB4:#ID_ETAT_VOIES
                 voies.voies = com.rxMsg[self.FIFO_lecture].data
                 self.ui.textEdit_panel.append(f"ID_ETAT_VOIES : etat voies : " + str(voies.voies))
@@ -229,7 +272,15 @@ class MainWindow(QMainWindow):
         # sample_message = Message(id=1, length=3, data=[0x01, 0x02, 0x03])
         packet = msg.build_packet()
         print(packet)
-        com.serial_thread.serial.write(packet)
+        if com.serial_thread.running:
+            try:
+                com.serial_thread.serial.write(packet)
+            except serial.SerialException as e:
+                print(f"Failed to send data: {e}")
+                com.serial_thread.close()
+        else:
+            self.ui.textEdit_panel.append(f"Aucun PORT COM de connecté! Veuillez-vous connectez.")
+                
 
     def sendEmpty(self, id):
         sample_message = Message(id, length=0, data=[0])
@@ -247,7 +298,7 @@ class MainWindow(QMainWindow):
         print("sendNbTours called")
         nbTours = int(self.ui.comboBox_nbTours.currentText())
         self.sendTwoBytes(ID_NB_TOURS, nbTours)
-
+    
     def sendRelancerTest(self):
         print("sendRelancerTest called")
         self.sendEmpty(ID_RELANCER_TEST)
@@ -255,9 +306,39 @@ class MainWindow(QMainWindow):
     def sendArretTest(self):
         print("sendArretTest called")
         self.sendEmpty(ID_ARRET_TEST)
+    
+    def send128Tours(self):
+        print("send128Tours called")
+        self.sendRelancerTest()
+        nbTours = 128
+        self.sendTwoBytes(ID_NB_TOURS, nbTours)
 
+    def openBilanWindow(self):
+        self.bilan_window.show()
     def openStateWindow(self):
         self.state_window.show()
+    def openDialogWindow(self):
+        self.dialog.show()
+    def openFicheValidation(self):
+        self.fiche_validation.show()
+    
+    def textPanel_Clear(self):
+        self.ui.textEdit_panel.clear()
+    
+    def closeSerial(self):
+        com.serial_thread.close()
+
+    def QuitWindows(self):
+        self.close()
+        QApplication.quit()
+        
+    def closeEvent(self, event):
+        print("Au revoir")
+        self.dialog.close()
+        self.state_window.close()
+        self.bilan_window.close()
+        self.fiche_validation.close()
+        super().closeEvent(event)
 #end MainWindow
 
 class Dialog(QDialog):
@@ -265,6 +346,7 @@ class Dialog(QDialog):
         super().__init__()
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
+        self.setWindowTitle("CHOIX PORT COM")
         self.ui.buttonBox.accepted.connect(self.start_serial)
         self.ui.buttonBox.rejected.connect(self.reject)
         self.populate_com_ports()
@@ -288,7 +370,7 @@ class Dialog(QDialog):
                 print("Serial Error", f"Failed to open port {selected_port}: {e}")
 #end Dialog
 
-class StateWindow(QDialog):
+class BilanWindow(QDialog):
     def __init__(self):
         super().__init__()
         self.ui = Ui_tableauVoies()
@@ -314,7 +396,36 @@ class StateWindow(QDialog):
 
                 if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
                     item.setText('Court-Circuit')
-                    item.setBackground(QColor("cyan"))
+                elif voies.voies[index] == etatVoies["ALARME"]:
+                    item.setText('Alarme')
+                elif voies.voies[index] == etatVoies["NORMAL"]:
+                    item.setText('Normal')
+                elif voies.voies[index] == etatVoies["CONGRUENCE"]:
+                    item.setText('Congruence')
+
+                self.ui.tableWidget.setItem(i, j, item)
+
+class StateWindow(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_TableauVoiesEnCours()
+        self.ui.setupUi(self)
+        self.update_states()
+        self.setWindowTitle("Etat Voies en Cours, envoyé par la carte ARAL")
+
+    # @Slot(list)
+    def update_states(self):
+        for i in range(10):
+            for j in range(10):
+                index = i * 10 + j
+                # print("j : " + str(j) + " i : " + str(i) + " index : " + str(index))
+                if(index>=96):
+                    return
+                item = QTableWidgetItem()
+                
+                if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
+                    item.setText('Court-Circuit')
+                    item.setBackground(QColor("darkCyan"))
                 elif voies.voies[index] == etatVoies["ALARME"]:
                     item.setText('Alarme')
                     item.setBackground(QColor("darkMagenta"))
@@ -323,16 +434,165 @@ class StateWindow(QDialog):
                     item.setBackground(QColor("green"))
                 elif voies.voies[index] == etatVoies["CONGRUENCE"]:
                     item.setText('Congruence')
+                    item.setBackground(QColor("gray"))
 
                 self.ui.tableWidget.setItem(i, j, item)
+
+
+class donneesFiche():
+    def __init__(self):
+        self.numSerie = ""
+        self.controleurTechnique = ""
+        self.controleurExterne = ""
+        self.commentaires = generatePDF.CommentaireCarteFonctionnelle
+donnees = donneesFiche()
+
+class FicheValidation(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_FicheValidation()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Etat Voies en Cours, envoyé par la carte ARAL")
+        print("Fiche Validation")
+        self.ui.buttonBox.accepted.connect(self.createPDFFicheValidation)
+        self.ui.buttonBox.rejected.connect(self.reject)
+        self.ui.pushButton_controleur_technique_ajout.clicked.connect(self.addControleurTechnique)
+        self.ui.pushButton_controleur_externe_ajout.clicked.connect(self.addControleurExterne)
+        self.init_controleurs_comboBox()
+
+        self.ui.lineEdit_num_serie.setText(donnees.numSerie)
+
+    def init_controleurs_comboBox(self):
+        self.ui.comboBox_controleur_technique.clear()
+        self.ui.comboBox_controleur_externe.clear()
+        try:
+            with open('PDF/controleur_technique.json', "r") as file:
+                items = json.load(file)
+                print("Loading controleur technique ", items)
+                self.ui.comboBox_controleur_technique.addItems(items)
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("PDF/controleur_technique.json error or not found")
+            # pass  # No items to load or file is empty
+        try:
+            with open('PDF/controleur_externe.json', "r") as file:
+                items = json.load(file)
+                print("Loading controleur externe ", items)
+                self.ui.comboBox_controleur_externe.addItems(items)
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("PDF/controleur_externe.json error or not found")
+            # pass  # No items to load or file is empty
+
+    def regrouper_voies_par_etat(self, bilan):
+        groupes = []
+        debut = 0
+        etat_actuel = bilan[0]
+        
+        for i in range(1, len(bilan)):
+            if bilan[i] != etat_actuel:
+                groupes.append((debut, i - 1, etat_actuel))
+                debut = i
+                etat_actuel = bilan[i]
+        groupes.append((debut, len(bilan) - 1, etat_actuel))
+        
+        return groupes
+    
+    def getCommentaires(self):
+        voies.bilan[34] = etatBilan["DEFAUT"]
+        voies.bilan[35] = etatBilan["DEFAUT"]
+        voies.bilan[36] = etatBilan["DEFAUT"]
+        voies.bilan[37] = etatBilan["OK"]
+        voies.bilan[38] = etatBilan["OK"]
+        voies.bilan[88] = etatBilan["OK"]
+        voies.bilan[89] = etatBilan["OK"]
+        
+        if self.ui.checkBox_prise_en_compte_test.isChecked():
+            if all(bilan == etatBilan["OK"] for bilan in voies.bilan):
+                return generatePDF.CommentaireCarteFonctionnelle
+            else:
+                groupes = self.regrouper_voies_par_etat(voies.bilan)
+                problemes = []
+                for debut, fin, etat in groupes:
+                    etat_str = [key for key, value in etatBilan.items() if value == etat][0]
+                    if debut == fin:
+                        problemes.append(f"Voie {debut + 1}: {etat_str}")
+                    else:
+                        problemes.append(f"Voies {debut + 1} à {fin + 1}: {etat_str}")
+                return generatePDF.CommentaireCarteMinimal + "Des problèmes ont été détectés dans le bilan des tests:\n" + "\n".join(problemes)
+        else:
+            return generatePDF.CommentaireCarteFonctionnelle
+
+    def createPDFFicheValidation(self):
+        donnees.numSerie = self.ui.lineEdit_num_serie.text()
+        donnees.controleurTechnique = self.ui.comboBox_controleur_technique.currentText()
+        donnees.controleurExterne = self.ui.comboBox_controleur_externe.currentText()
+        donnees.commentaires = self.getCommentaires()
+        fiche = generatePDF.FicheValidation()
+        output = fiche.generateFicheValidation(donnees.numSerie, donnees.controleurTechnique, donnees.controleurExterne, donnees.commentaires)
+        fiche.writePDF(output) 
+        self.accept()
+    
+    def addControleurTechnique(self):
+        donnees.numSerie = self.ui.lineEdit_num_serie.text()
+        self.ajoutTech = AjoutControleurTechnique()
+        self.ajoutTech.show()
+        self.reject()
+
+    def addControleurExterne(self):
+        donnees.numSerie = self.ui.lineEdit_num_serie.text()
+        self.ajoutExt = AjoutControleurExterne()
+        self.ajoutExt.show()
+        self.reject()
+
+
+class AjoutControleurTechnique(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_AjoutControleur()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Ajout Controleur Technique")
+        self.ui.buttonBox.accepted.connect(self.controleurAccept)
+        self.ui.buttonBox.rejected.connect(self.controleurRejected)
+    
+    def controleurAccept(self):
+        controleur = self.ui.lineEdit.text()
+        generatePDF.add_items_to_json('PDF/controleur_technique.json', controleur)
+        self.fiche = FicheValidation()
+        self.fiche.show()
+        self.accept()
+
+    def controleurRejected(self):
+        self.fiche = FicheValidation()
+        self.fiche.show()
+        self.reject()
+
+class AjoutControleurExterne(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_AjoutControleur()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Ajout Controleur Externe")
+        self.ui.buttonBox.accepted.connect(self.controleurAccept)
+        self.ui.buttonBox.rejected.connect(self.controleurRejected)
+    
+    def controleurAccept(self):
+        controleur = self.ui.lineEdit.text()
+        generatePDF.add_items_to_json('PDF/controleur_externe.json', controleur)
+        self.fiche = FicheValidation()
+        self.fiche.show()
+        self.accept()
+
+    def controleurRejected(self):
+        self.fiche = FicheValidation()
+        self.fiche.show()
+        self.reject()
 
 def main():
     app = QApplication([]) 
     main_window = MainWindow()
     main_window.show()
 
-    dialog = Dialog()
-    dialog.show()
+    main_window.dialog.show()
+
 
     sys.exit(app.exec())
 
