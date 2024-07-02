@@ -415,10 +415,12 @@ class MainWindow(QMainWindow):
         com.serial_thread.close()
     
     def resetStruct(self):
+        self.ui.textEdit_panel.append(f"")
+        self.ui.textEdit_panel.append(f"-----------Refraichissement...")
         voies.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
         voies.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
         voies.perteDeCom = 0
-
+        
     def QuitWindows(self):
         self.close()
         QApplication.quit()
@@ -570,7 +572,7 @@ class FicheValidation(QDialog):
             # pass  # No items to load or file is empty
 
     def genererNumSerie(self):
-        donnees.numSerie = generatePDF.generer_numero_serie("172")
+        donnees.numSerie = generatePDF.generer_numero_serie("17")
         self.ui.lineEdit_num_serie.setText(donnees.numSerie)
 
     def regrouper_voies_par_etat(self, bilan):

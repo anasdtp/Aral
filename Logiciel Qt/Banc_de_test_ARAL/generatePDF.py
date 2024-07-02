@@ -68,17 +68,19 @@ def generer_numero_serie(prefixe, filePath = output_directory + '/compteurNumSer
     maintenant = datetime.now()
     mois = maintenant.strftime("%m")
     annee = maintenant.strftime("%Y")
-    
-    # Formater le numéro avec 4 chiffres significatif
-    compteur = f"{items[0]:04d}"
+    semaine = maintenant.isocalendar()[1]  # Obtenir le numéro de la semaine dans l'année
+
+    # Formater le numéro avec 3 chiffres significatifs
+    compteur = f"{items[0]:03d}"
     
     # Créer le numéro de série
-    numero_serie = f"{prefixe}{compteur} {mois}-{annee}"
+    numero_serie = f"{prefixe}{semaine:02d}{compteur} {mois}-{annee}"
 
-    items[0] = (items[0]+1)%9999
+    items[0] = (items[0] + 1) % 9999
 
     with open(filePath, "w") as file:
         json.dump(items, file)
+    
     return numero_serie
 
 def createPDFText(text, x, y, interligne = 40):
