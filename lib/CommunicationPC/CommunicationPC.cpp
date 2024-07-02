@@ -34,7 +34,7 @@ void CommunicationPC::begin(HardwareSerial *srl, long baud, String nameBT){
     _serialBT->register_callback(onReceiveFunctionBTStatic);
 
     setNombreTours(1);
-    _resetTestRequest = false; _StopTestRequest = false;
+    _resetTestRequest = false; _StopTestRequest = false; _NbToursFaitRequest = false; _BilanRequest = false;
 }
 
 void CommunicationPC::end()
@@ -230,6 +230,18 @@ void CommunicationPC::RxManage(){
             sendMsg(ID_ACK_GENERAL);
         }break;
 
+        case ID_REQUEST_BILAN:{
+            _BilanRequest = true;
+            printMidOLED(("Demande de bilan"), 2, 1);
+            sendMsg(ID_ACK_GENERAL);
+        }break;
+
+        case ID_REQUEST_NB_TOURS_FAIT:{
+            _NbToursFaitRequest = true;
+            printMidOLED(("Demande du nombre de tours fait"), 2, 1);
+            sendMsg(ID_ACK_GENERAL);
+        }break;
+
         default:
             sendMsg(ID_ACK_GENERAL);
             break;
@@ -291,6 +303,12 @@ void CommunicationPC::sendMsg(uint8_t id, uint8_t len, uint8_t *data){
 void CommunicationPC::sendMsg(uint8_t id, uint8_t octet){
     const uint8_t len = 1;
     uint8_t data[len] = {octet};
+    sendMsg(id, len, data);
+}
+
+void CommunicationPC::sendMsg(uint8_t id, uint8_t octet1, uint8_t octet2){
+    const uint8_t len = 2;
+    uint8_t data[len] = {octet1, octet2};
     sendMsg(id, len, data);
 }
 

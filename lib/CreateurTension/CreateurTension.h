@@ -13,7 +13,7 @@ enum Tension{
     ALARME          = 1,//3.3V       //01
     NORMAL          = 2,//6V         //10
     CONGRUENCE      = 3,//15V     //11
-    BOUCLE_OUVERTE  = 4
+    BOUCLE_OUVERTE  = 3//Car l'etat boucle ouverte n'existe pas en situation sur site
 };
 
 class CreateurTension

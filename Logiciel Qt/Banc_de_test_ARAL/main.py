@@ -6,7 +6,7 @@ import serial
 import serial.tools.list_ports
 import struct
 import json
-# import time
+import time
 from ui_mainwindow import Ui_MainWindow
 from ui_dialog import Ui_Dialog
 from ui_tableauVoies import Ui_tableauVoies
@@ -19,7 +19,7 @@ from ui_ajoutControleur import Ui_AjoutControleur
 #   pyside6-uic dialog.ui -o ui_dialog.py
 #   pyside6-uic tableauBilan.ui -o ui_tableauVoies.py
 #   pyside6-uic ficheValidation.ui -o ui_ficheValidation.py
-#   pyside6-uic ajoutControleur.ui -o ui_ajoutControleur.py
+#   pyside6-uic ajoutControleur.ui -o ui_ajoutControleur.py 
 
 SERIAL_BAUDRATE = 921600
 
@@ -31,6 +31,9 @@ ID_INITIALISATION_ARAL_FAITE    = 0xB1 #RIEN
 ID_TEST_EN_COURS = 0xB2 #Reception du bilan de test du tours effectué
 ID_TEST_TERMINEE = 0xB3 #Reception du bilan de test
 ID_ETAT_VOIES = 0xB4 #Reception de l'etat des voies directement de la carte ARAL
+ID_ETAT_UNE_VOIE = 0xB5 #Reception de l'etat d'une voie en defaut ou ok avec data[0]->(Num de la voie) et data[1]->(Etat, OK=0x30, Defaut = 0x10, non testée = 0)
+ID_CARTE_ARAL_NE_REPOND_PLUS = 0xB6
+ID_CARTE_ARAL_REPEAT_REQUEST = 0xB7
 
 ID_ACK_GENERAL      = 0xC0
 ID_RELANCER_TEST    = 0xC1
@@ -38,6 +41,7 @@ ID_ARRET_TEST       = 0xC2
 ID_REPEAT_REQUEST   = 0xD0
 ID_REQUEST_NB_TOURS_FAIT = 0xD1
 ID_ACK_REQUEST_NB_TOURS_FAIT = 0xD2
+ID_REQUEST_BILAN = 0xD3
 
 class Message():
     def __init__(self, id=0, length=0, data=None, checksum=0):
@@ -63,6 +67,8 @@ class COMMUNICATION():
         self.rxMsg = [Message() for _ in range(SIZE_FIFO)]
         self.FIFO_Ecriture = 0
         self.serial_thread = None
+        self.ecritureEnCours = False #Flag pour faire savoir qu'on a lancé une ecriture
+        self.problemeEnEcriture = False #Flag pour dire que le serial.write n'a pas fonctionné
 com = COMMUNICATION()
 
 NOMBRE_VOIES = 96
@@ -82,6 +88,7 @@ class VOIE():
     def __init__(self):
         self.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
         self.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
+        self.perteDeCom = 0
 voies = VOIE()
 
 class SerialThread(QThread):
@@ -102,6 +109,8 @@ class SerialThread(QThread):
         self.stateRx = 0
         self.compteurData = 0
 
+        self.lastTime = time.time()
+
         self.msgError = ""
 
     def run(self):
@@ -115,20 +124,27 @@ class SerialThread(QThread):
                 # sample_message = Message(id=1, length=3, data=[0x01, 0x02, 0x03])
                 # packet = sample_message.build_packet()
                 # self.serial.write(packet)
+            if((time.time()-self.lastTime) > 3):
+                self.lastTime = time.time()
+                if(com.ecritureEnCours):
+                    com.ecritureEnCours = False
+                    self.serial.cancel_write() #Pour debloquer toutes les 3 secondes si jamais il y a un probléme
+                    com.problemeEnEcriture = True
+            
 
     def close(self):
         if self.running:
             self.running = False
             self.serial.close()
     
-    def send_data(self, data):
-        if self.running:
-            try:
-                self.serial.write(data)
-            except serial.SerialException as e:
-                print(f"Failed to send data: {e}")
-                self.close()
-                self.running = False
+    # def send_data(self, data):
+    #     if self.running:
+    #         try:
+    #             self.serial.write(data)
+    #         except serial.SerialException as e:
+    #             print(f"Failed to send data: {e}")
+    #             self.close()
+    #             self.running = False
 
     # @Slot(bytes)
     def RxReceive(self, message):
@@ -198,6 +214,8 @@ class MainWindow(QMainWindow):
         self.ui.sendButton_arret.clicked.connect(self.sendArretTest)
 
         self.dialog = Dialog()
+        self.dialog.ui.buttonBox.accepted.connect(self.start_serial)
+
         self.bilan_window = BilanWindow()
         self.state_window = StateWindow()
         self.fiche_validation = FicheValidation()
@@ -209,6 +227,7 @@ class MainWindow(QMainWindow):
         self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
         self.ui.actionConnect.triggered.connect(self.openDialogWindow)
         self.ui.actionDisconnect.triggered.connect(self.closeSerial)
+        self.ui.actionReset.triggered.connect(self.resetStruct)
 
         self.ui.sendButton_lancementTestNuit.clicked.connect(self.send128Tours)
         print("Initialized MainWindow")
@@ -221,6 +240,25 @@ class MainWindow(QMainWindow):
         self.FIFO_occupation = 0
         self.FIFO_max_occupation = 0
         print("End Initialization MainWindow")
+
+    
+    def start_serial(self):
+        selected_port = self.dialog.ui.comboBox.currentText()
+        print(selected_port)
+        if selected_port:
+            try:
+                com.serial_thread = SerialThread(selected_port, SERIAL_BAUDRATE)
+                com.serial_thread.start()
+                print("Starting serial com")
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"-----------Starting serial com")
+                self.ui.textEdit_panel.append(f"-----------Port: {selected_port}")
+                self.dialog.accept()
+            except serial.SerialException as e:
+                print("Serial Error", f"Failed to open port {selected_port}: {e}")
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"-----------Serial Error !!")
+                self.ui.textEdit_panel.append(f"-----------Failed to open port {selected_port}: {e}")
         
 
     def RxManage(self):
@@ -235,31 +273,56 @@ class MainWindow(QMainWindow):
 
         match com.rxMsg[self.FIFO_lecture].id:
             case 0xA0:#ID_NB_TOURS
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"Received message from ID_NB_TOURS??? Bizarre")
                 pass
             case 0xA1:#ID_ACK_NB_TOURS
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_ACK_NB_TOURS : Banc de test à bien reçu le nombre de tours à faire")
             case 0xB0:#ID_INITIALISATION_ARAL_EN_COURS
                 nbEssai = com.rxMsg[self.FIFO_lecture].data[0]
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_INITIALISATION_ARAL_EN_COURS : initialisation carte aral... " + str(nbEssai))
             case 0xB1:#ID_INITIALISATION_ARAL_FAITE
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_INITIALISATION_ARAL_FAITE : carte aral initialisée!!")
             case 0xB2:#ID_TEST_EN_COURS
                 voies.bilan = com.rxMsg[self.FIFO_lecture].data
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_TEST_EN_COURS : bilan : " + str(voies.bilan))
                 self.bilan_window.update_states()
             case 0xB3:#ID_TEST_TERMINEE
                 voies.bilan = com.rxMsg[self.FIFO_lecture].data
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_TEST_TERMINEE : bilan : " + str(voies.bilan))
                 self.bilan_window.update_states()
                 self.bilan_window.show()
-            case 0xB4:#ID_ETAT_VOIES
+            case 0xB4:#ID_ETAT_VOIES 
                 voies.voies = com.rxMsg[self.FIFO_lecture].data
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_ETAT_VOIES : etat voies : " + str(voies.voies))
                 self.state_window.update_states()
+            case 0xB5:#ID_ETAT_UNE_VOIE
+                numVoie = com.rxMsg[self.FIFO_lecture].data[0]
+                etatVoie = com.rxMsg[self.FIFO_lecture].data[1]
+                if(numVoie>0 and numVoie<=96):
+                    voies.bilan[numVoie-1] = etatVoie
+                    self.bilan_window.update_states()
+                    if(etatVoies == etatBilan["DEFAUT"]):
+                        self.ui.textEdit_panel.append(f"")
+                        self.ui.textEdit_panel.append(f"ID_ETAT_UNE_VOIE : Voie n°"+ str(numVoie) +" en DEFAUT")
+            case 0xB6:#ID_CARTE_ARAL_NE_REPOND_PLUS
+                voies.perteDeCom += 1
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"ID_CARTE_ARAL_NE_REPOND_PLUS : carte ARAL ne répond plus !! Defaut COM!")
+            case 0xB7:#ID_CARTE_ARAL_REPEAT_REQUEST
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"ID_CARTE_ARAL_REPEAT_REQUEST : la carte aral demande de repeter le message")
             case 0xC0:#ID_ACK_GENERAL
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_ACK_GENERAL : reponse gen")
             case 0xD0:#ID_REPEAT_REQUEST
+                self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_REPEAT_REQUEST : le banc de test n'a pas compris, message incohérent")
             case _:
                 self.ui.textEdit_panel.append(f"Received message from an unknown ID")
@@ -272,12 +335,26 @@ class MainWindow(QMainWindow):
         print(packet)
         if com.serial_thread.running:
             try:
-                com.serial_thread.serial.write(packet)
-            except serial.SerialException as e:
-                print(f"Failed to send data: {e}")
+                com.ecritureEnCours = True
+                com.serial_thread.serial.write(packet) #Fonction bloquante, qui se debloque toutes les 3 secondes si l'envoi à echouer
+                com.ecritureEnCours = False
+                if(com.problemeEnEcriture):
+                    com.problemeEnEcriture = False
+                    self.ui.textEdit_panel.append(f"")
+                    self.ui.textEdit_panel.append(f"-----------Problème rencontré lors de l'envoi de données")
+                    self.ui.textEdit_panel.append(f"-----------Deconnexion du PORT COM...")
+                    com.serial_thread.close()
+                    self.ui.textEdit_panel.append(f"-----------Essayer de vous reconnectez svp")
+            except (serial.SerialException) as e:
+                error_message = f"Failed to send data: {e.__class__.__name__}: {e}"
+                print(error_message)
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"-----------{error_message}")
                 com.serial_thread.close()
+                self.ui.textEdit_panel.append(f"-----------Essayer de vous reconnectez svp")
         else:
-            self.ui.textEdit_panel.append(f"Aucun PORT COM de connecté! Veuillez-vous connectez.")
+            self.ui.textEdit_panel.append(f"")
+            self.ui.textEdit_panel.append(f"-----------Aucun PORT COM de connecté! Veuillez-vous connectez.")
                 
 
     def sendEmpty(self, id):
@@ -312,19 +389,35 @@ class MainWindow(QMainWindow):
         self.sendTwoBytes(ID_NB_TOURS, nbTours)
 
     def openBilanWindow(self):
+        self.sendEmpty(ID_REQUEST_BILAN)
         self.bilan_window.show()
+        self.bilan_window.raise_()
+        self.bilan_window.activateWindow()
     def openStateWindow(self):
         self.state_window.show()
+        self.state_window.raise_()
+        self.state_window.activateWindow()
     def openDialogWindow(self):
         self.dialog.show()
+        self.dialog.raise_()
+        self.dialog.activateWindow()
     def openFicheValidation(self):
         self.fiche_validation.show()
+        self.fiche_validation.raise_()
+        self.fiche_validation.activateWindow()
     
     def textPanel_Clear(self):
         self.ui.textEdit_panel.clear()
     
     def closeSerial(self):
+        self.ui.textEdit_panel.append(f"")
+        self.ui.textEdit_panel.append(f"-----------Deconnexion du PORT COM...")
         com.serial_thread.close()
+    
+    def resetStruct(self):
+        voies.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
+        voies.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
+        voies.perteDeCom = 0
 
     def QuitWindows(self):
         self.close()
@@ -345,7 +438,7 @@ class Dialog(QDialog):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.setWindowTitle("CHOIX PORT COM")
-        self.ui.buttonBox.accepted.connect(self.start_serial)
+        # self.ui.buttonBox.accepted.connect(self.start_serial) #Fait dans la mainwindow
         self.ui.buttonBox.rejected.connect(self.reject)
         self.populate_com_ports()
 
@@ -387,19 +480,13 @@ class BilanWindow(QDialog):
                 item = QTableWidgetItem()
                 if voies.bilan[index] == etatBilan["OK"]:
                     item.setBackground(QColor("darkGreen"))
+                    item.setText('OK')
                 elif voies.bilan[index] == etatBilan["DEFAUT"]:
                     item.setBackground(QColor("red"))
+                    item.setText('DEFAUT')
                 else:
                     item.setBackground(QColor("gray"))
-
-                if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
-                    item.setText('Court-Circuit')
-                elif voies.voies[index] == etatVoies["ALARME"]:
-                    item.setText('Alarme')
-                elif voies.voies[index] == etatVoies["NORMAL"]:
-                    item.setText('Normal')
-                elif voies.voies[index] == etatVoies["CONGRUENCE"]:
-                    item.setText('Congruence')
+                    item.setText('Non-testée')
 
                 self.ui.tableWidget.setItem(i, j, item)
 
@@ -498,10 +585,11 @@ class FicheValidation(QDialog):
         groupes.append((debut, len(bilan) - 1, etat_actuel))
         return groupes
 
-    def getCommentaires(self):        
+    def getCommentaires(self):
+        commentaires = ""        
         if self.ui.checkBox_prise_en_compte_test.isChecked():
             if all(bilan == etatBilan["OK"] for bilan in voies.bilan):
-                return generatePDF.CommentaireCarteFonctionnelle
+                commentaires = generatePDF.CommentaireCarteFonctionnelle
             else:
                 groupes = self.regrouper_voies_par_etat(voies.bilan)
                 problemes = []
@@ -511,9 +599,13 @@ class FicheValidation(QDialog):
                         problemes.append(f"Voie {debut + 1}: {etat_str}")
                     else:
                         problemes.append(f"Voies {debut + 1} à {fin + 1}: {etat_str}")
-                return generatePDF.CommentaireCarteMinimal + "Des problèmes ont été détectés dans le bilan des tests:\n" + "\n".join(problemes)
+                commentaires = generatePDF.CommentaireCarteMinimal + "Des problèmes ont été détectés dans le bilan des tests:\n" + "\n".join(problemes)
+            if(voies.perteDeCom>0):
+                commentaires += "Perte(s) de communication durant le test ("+ str(voies.perteDeCom)+" fois)\n"
         else:
-            return generatePDF.CommentaireCarteFonctionnelle
+            commentaires = generatePDF.CommentaireCarteFonctionnelle
+        
+        return commentaires
 
     def createPDFFicheValidation(self):
         donnees.numSerie = self.ui.lineEdit_num_serie.text()

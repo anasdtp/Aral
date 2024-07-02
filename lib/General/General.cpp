@@ -37,15 +37,17 @@ void General::selectionVoie(Tension alarme, uint8_t voie){//de 1 à 96
 
   if(alarme == BOUCLE_OUVERTE){
     _voie->disableMUX();//Pour eviter de mettre une alarme dans une voie indésirer pendant le traitement
-    _alarme->creationTensionVoie_1_48(COURT_CIRCUIT);
-    _alarme->creationTensionVoie_49_96(COURT_CIRCUIT);
+    _alarme->creationTensionVoie_1_48(BOUCLE_OUVERTE);
+    _alarme->creationTensionVoie_49_96(BOUCLE_OUVERTE);
     return;
   }
 
   if(voie>48){
+    _alarme->creationTensionVoie_1_48(BOUCLE_OUVERTE);//Pour pas qu'elle est une autre valeur "au hasard"
     _alarme->creationTensionVoie_49_96(alarme);
   }else{
     _alarme->creationTensionVoie_1_48(alarme);
+    _alarme->creationTensionVoie_49_96(BOUCLE_OUVERTE);//Pour pas qu'elle est une autre valeur "au hasard"
   }
 
   _voie->selectionVoie(voie);
@@ -89,7 +91,6 @@ void General::txLoop(){
       _pc->sendMsg(ID_INITIALISATION_ARAL_FAITE);
       nbToursFait = 0;
     }
-
     //Test Bilan a commenté: 
     // for (int i = 0; i < 96; i++)
     // {
@@ -113,7 +114,9 @@ void General::txLoop(){
     else if(_pc->getStopTestRequest()){
       etat_gen = BILAN;
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
-      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, nbToursFait);
+      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
+    }else if (_pc->getBilanRequest()){
+      _pc->sendMsg(ID_TEST_EN_COURS, bilan);
     }
     _pc->getRestartTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un reset alors qu'on est deja entrain de faire un test
   }
@@ -122,6 +125,7 @@ void General::txLoop(){
   {
     displayBilanTest(bilan);
     rainbow(20);
+    _pc->getStopTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un stop alors qu'on est deja au bilan
     if(_pc->getRestartTestRequest()){
       etat_gen = TEST_VOIES;
       for (int i = 0; i < 96; i++)
@@ -130,18 +134,20 @@ void General::txLoop(){
       }
       
     }
-    _pc->getStopTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un stop alors qu'on est deja au bilan
+    if (_pc->getBilanRequest()){
+      _pc->sendMsg(ID_TEST_TERMINEE, bilan);
+    }
+
+    TestContinueVoiesBoucleOuverte();//Pour faire tourner les voies si jamais on veut brancher la carte aral à l'ancien logiciel.
   }
   break;
   default:
     etat_gen = INIT_COM;
     break;
   }
-
   if(_pc->getNbToursFaitRequest()){
-    _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, nbToursFait);
+    _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
   }
-
 }
 
 bool General::initialisationARAL(){
@@ -345,23 +351,26 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       getTension(voies);
       _pc->sendMsg(ID_ETAT_VOIES, voies);
       //Serial.printf("Test de la voie %2d, alarme %s", voieActuelle, alarmeText[alarmeActuelle]);
-      if(voies.voies[voieActuelle-1] == alarmeActuelle){
-        if(bilan.voies[voieActuelle-1] != VOIE_EN_DEFAUT){
-          bilan.voies[voieActuelle-1] = VOIE_OK;
-          //Serial.println(" OKAY!");
+      if(voieActuelle > 0 && voieActuelle < 96){
+        if(voies.voies[voieActuelle-1] == alarmeActuelle){
+          if(bilan.voies[voieActuelle-1] != VOIE_EN_DEFAUT){
+            bilan.voies[voieActuelle-1] = VOIE_OK;
+            //Serial.println(" OKAY!");
+          }
+          // else{
+            // bilan.voies[voieActuelle-1] = false;
+            //Serial.println(" Okay sur cette alarme mais sur d'autres alarmes non !");
+          // }
+        }else{
+          //Serial.println(" LA VOIE N'EST PAS BONNE!!");
+          bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
         }
-        else{
-          // bilan.voies[voieActuelle-1] = false;
-          //Serial.println(" Okay sur cette alarme mais sur d'autres alarmes non !");
-        }
-      }else{
-        //Serial.println(" LA VOIE N'EST PAS BONNE!!");
-        bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
-      }
-      displayEtatVoie(voieActuelle, alarmeText[alarmeActuelle], bilan.voies[voieActuelle-1]);
+        _pc->sendMsg(ID_ETAT_UNE_VOIE, (uint8_t)voieActuelle, (uint8_t)bilan.voies[voieActuelle-1]);
+        displayEtatVoie(voieActuelle, alarmeText[alarmeActuelle], bilan.voies[voieActuelle-1]);
 
-      LedAlarmeActuelle(alarmeActuelle);
-      LedEtatVoieActuelle(bilan.voies[voieActuelle-1]);
+        LedAlarmeActuelle(alarmeActuelle);
+        LedEtatVoieActuelle(bilan.voies[voieActuelle-1]);
+      }
       etat = SELECTION_DE_VOIE;
       etape = 1;
     }
@@ -383,6 +392,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
         _com->sendMsg(_com->ACK.id);
         setLedColor(NUM_PIXELS, BLUE);
         printMidOLED("La carte ARAL demande une repetition du dernier message...", 1, 1);
+        _pc->sendMsg(ID_CARTE_ARAL_REPEAT_REQUEST, (uint8_t)_com->ACK.id);
       }
       else if((millis() - startTimeVoie)> TIMEOUT_ACK){
         startTimeVoie = millis();
@@ -391,6 +401,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
         printMidOLED("La carte ARAL \n ne repond pas ! \n Verifier les connexions", 1, 1);
         setLedColor(NUM_PIXELS, BLUE);
         _com->sendMsg(_com->ACK.id);
+        _pc->sendMsg(ID_CARTE_ARAL_NE_REPOND_PLUS, (uint8_t)_com->ACK.id);
       }
     }
     break;
@@ -416,7 +427,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       //Serial.println("*************");
 
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
-      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, nbToursFait);
+      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
       nbToursFait = 0;
       _numAlarme = 0;
       voieActuelle = 1;
@@ -435,7 +446,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
 }
 
 void General::TestContinueVoiesBoucleOuverte(){
-  static int voie = 1; static uint32_t startTimeVoie = 0, TempsSwitchVoie = 250; 
+  static int voie = 1; static uint32_t startTimeVoie = 0, TempsSwitchVoie = 300; 
   static int numAlarme = 0; static Tension TabTension[4]={COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE};
 
   if((millis() - startTimeVoie)>TempsSwitchVoie){

@@ -52,7 +52,7 @@ private:
         NONE,
     };
 
-    uint16_t nbToursFait; // nombre de tours de tests avant le bilan
+    int nbToursFait; // nombre de tours de tests avant le bilan
     etatVoieTestee _act;
     void selectionVoie(Tension alarme, uint8_t voie = 1);
 

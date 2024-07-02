@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(800, 411)
+        MainWindow.resize(1215, 639)
         self.actionTableau_Voies_Bilan = QAction(MainWindow)
         self.actionTableau_Voies_Bilan.setObjectName(u"actionTableau_Voies_Bilan")
         self.actionTableau_Voies_en_Cours = QAction(MainWindow)
@@ -53,20 +53,25 @@ class Ui_MainWindow(object):
         icon3 = QIcon()
         icon3.addFile(u":/images/application-exit.png", QSize(), QIcon.Normal, QIcon.Off)
         self.actionQuit.setIcon(icon3)
+        self.actionReset = QAction(MainWindow)
+        self.actionReset.setObjectName(u"actionReset")
+        icon4 = QIcon()
+        icon4.addFile(u":/images/refresh.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.actionReset.setIcon(icon4)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.verticalLayout = QVBoxLayout(self.centralwidget)
+        self.verticalLayout.setObjectName(u"verticalLayout")
         self.label_4 = QLabel(self.centralwidget)
         self.label_4.setObjectName(u"label_4")
         self.label_4.setAlignment(Qt.AlignCenter)
 
-        self.verticalLayout_2.addWidget(self.label_4)
+        self.verticalLayout.addWidget(self.label_4)
 
         self.textEdit_panel = QTextEdit(self.centralwidget)
         self.textEdit_panel.setObjectName(u"textEdit_panel")
 
-        self.verticalLayout_2.addWidget(self.textEdit_panel)
+        self.verticalLayout.addWidget(self.textEdit_panel)
 
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
@@ -103,7 +108,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_4.addLayout(self.horizontalLayout_3)
 
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout_4)
+        self.verticalLayout.addLayout(self.horizontalLayout_4)
 
         self.horizontalLayout = QHBoxLayout()
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -137,7 +142,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.sendButton_nbTours)
 
 
-        self.verticalLayout_2.addLayout(self.horizontalLayout)
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
         self.sendButton_lancementTestNuit = QPushButton(self.centralwidget)
         self.sendButton_lancementTestNuit.setObjectName(u"sendButton_lancementTestNuit")
@@ -151,12 +156,12 @@ class Ui_MainWindow(object):
         self.sendButton_lancementTestNuit.setFocusPolicy(Qt.StrongFocus)
         self.sendButton_lancementTestNuit.setCheckable(False)
 
-        self.verticalLayout_2.addWidget(self.sendButton_lancementTestNuit)
+        self.verticalLayout.addWidget(self.sendButton_lancementTestNuit)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 25))
+        self.menubar.setGeometry(QRect(0, 0, 1215, 25))
         self.menuFichiers = QMenu(self.menubar)
         self.menuFichiers.setObjectName(u"menuFichiers")
         self.menuCreation_PDF = QMenu(self.menubar)
@@ -188,6 +193,7 @@ class Ui_MainWindow(object):
         self.mainToolBar.addSeparator()
         self.mainToolBar.addAction(self.actionTableau_Voies_en_Cours)
         self.mainToolBar.addAction(self.actionFicheValidation)
+        self.mainToolBar.addAction(self.actionReset)
 
         self.retranslateUi(MainWindow)
 
@@ -203,6 +209,7 @@ class Ui_MainWindow(object):
         self.actionDisconnect.setText(QCoreApplication.translate("MainWindow", u"&Disconnect", None))
         self.actionClearLog.setText(QCoreApplication.translate("MainWindow", u"Clear &Log", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"&Quit", None))
+        self.actionReset.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
         self.label_4.setText(QCoreApplication.translate("MainWindow", u"Banc de Test Carte ARAL", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"ARRET / Affichage du Bilan", None))
         self.sendButton_arret.setText(QCoreApplication.translate("MainWindow", u"Send", None))

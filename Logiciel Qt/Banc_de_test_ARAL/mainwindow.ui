@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>411</height>
+    <width>1215</width>
+    <height>639</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QLabel" name="label_4">
       <property name="text">
@@ -208,7 +208,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
+     <width>1215</width>
      <height>25</height>
     </rect>
    </property>
@@ -261,6 +261,7 @@
    <addaction name="separator"/>
    <addaction name="actionTableau_Voies_en_Cours"/>
    <addaction name="actionFicheValidation"/>
+   <addaction name="actionReset"/>
   </widget>
   <action name="actionTableau_Voies_Bilan">
    <property name="text">
@@ -311,6 +312,15 @@
    </property>
    <property name="text">
     <string>&amp;Quit</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="icon">
+    <iconset resource="Ressources.qrc">
+     <normaloff>:/images/refresh.png</normaloff>:/images/refresh.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset</string>
    </property>
   </action>
  </widget>
