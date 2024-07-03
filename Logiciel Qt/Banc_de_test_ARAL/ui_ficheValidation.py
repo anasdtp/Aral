@@ -64,6 +64,9 @@ class Ui_FicheValidation(object):
 
         self.comboBox_controleur_technique = QComboBox(Dialog)
         self.comboBox_controleur_technique.setObjectName(u"comboBox_controleur_technique")
+        self.comboBox_controleur_technique.setCursor(QCursor(Qt.IBeamCursor))
+        self.comboBox_controleur_technique.setEditable(True)
+        self.comboBox_controleur_technique.setMaxVisibleItems(40)
 
         self.horizontalLayout_2.addWidget(self.comboBox_controleur_technique)
 
@@ -79,26 +82,14 @@ class Ui_FicheValidation(object):
 
         self.comboBox_controleur_externe = QComboBox(Dialog)
         self.comboBox_controleur_externe.setObjectName(u"comboBox_controleur_externe")
+        self.comboBox_controleur_externe.setCursor(QCursor(Qt.IBeamCursor))
+        self.comboBox_controleur_externe.setEditable(True)
+        self.comboBox_controleur_externe.setMaxVisibleItems(40)
 
         self.horizontalLayout_3.addWidget(self.comboBox_controleur_externe)
 
 
         self.verticalLayout.addLayout(self.horizontalLayout_3)
-
-        self.horizontalLayout_5 = QHBoxLayout()
-        self.horizontalLayout_5.setObjectName(u"horizontalLayout_5")
-        self.pushButton_controleur_technique_ajout = QPushButton(Dialog)
-        self.pushButton_controleur_technique_ajout.setObjectName(u"pushButton_controleur_technique_ajout")
-
-        self.horizontalLayout_5.addWidget(self.pushButton_controleur_technique_ajout)
-
-        self.pushButton_controleur_externe_ajout = QPushButton(Dialog)
-        self.pushButton_controleur_externe_ajout.setObjectName(u"pushButton_controleur_externe_ajout")
-
-        self.horizontalLayout_5.addWidget(self.pushButton_controleur_externe_ajout)
-
-
-        self.verticalLayout.addLayout(self.horizontalLayout_5)
 
         self.buttonBox = QDialogButtonBox(Dialog)
         self.buttonBox.setObjectName(u"buttonBox")
@@ -122,7 +113,5 @@ class Ui_FicheValidation(object):
         self.pushButton_num_serie_generer_auto.setText(QCoreApplication.translate("Dialog", u"G\u00e9n\u00e9rer automatiquement", None))
         self.label_2.setText(QCoreApplication.translate("Dialog", u"Controleur Technique :", None))
         self.label_3.setText(QCoreApplication.translate("Dialog", u"Controleur Externe :", None))
-        self.pushButton_controleur_technique_ajout.setText(QCoreApplication.translate("Dialog", u"Ajout d'un controleur technique", None))
-        self.pushButton_controleur_externe_ajout.setText(QCoreApplication.translate("Dialog", u"Ajout d'un controleur externe", None))
     # retranslateUi
 

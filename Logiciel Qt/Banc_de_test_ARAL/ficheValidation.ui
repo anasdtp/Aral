@@ -61,7 +61,17 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="comboBox_controleur_technique"/>
+      <widget class="QComboBox" name="comboBox_controleur_technique">
+       <property name="cursor">
+        <cursorShape>IBeamCursor</cursorShape>
+       </property>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+       <property name="maxVisibleItems">
+        <number>40</number>
+       </property>
+      </widget>
      </item>
     </layout>
    </item>
@@ -75,23 +85,15 @@
       </widget>
      </item>
      <item>
-      <widget class="QComboBox" name="comboBox_controleur_externe"/>
-     </item>
-    </layout>
-   </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_5">
-     <item>
-      <widget class="QPushButton" name="pushButton_controleur_technique_ajout">
-       <property name="text">
-        <string>Ajout d'un controleur technique</string>
+      <widget class="QComboBox" name="comboBox_controleur_externe">
+       <property name="cursor">
+        <cursorShape>IBeamCursor</cursorShape>
        </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="pushButton_controleur_externe_ajout">
-       <property name="text">
-        <string>Ajout d'un controleur externe</string>
+       <property name="editable">
+        <bool>true</bool>
+       </property>
+       <property name="maxVisibleItems">
+        <number>40</number>
        </property>
       </widget>
      </item>

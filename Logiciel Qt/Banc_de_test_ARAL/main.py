@@ -12,7 +12,6 @@ from ui_dialog import Ui_Dialog
 from ui_tableauVoies import Ui_tableauVoies
 import generatePDF
 from ui_ficheValidation import Ui_FicheValidation
-from ui_ajoutControleur import Ui_AjoutControleur
 #Pour actualiser : 
 #   pyside6-rcc -o Ressources_rc.py Ressources.qrc
 #   pyside6-uic mainwindow.ui -o ui_mainwindow.py
@@ -393,10 +392,12 @@ class MainWindow(QMainWindow):
         self.bilan_window.show()
         self.bilan_window.raise_()
         self.bilan_window.activateWindow()
+        self.bilan_window.update_states()
     def openStateWindow(self):
         self.state_window.show()
         self.state_window.raise_()
         self.state_window.activateWindow()
+        self.state_window.update_states()
     def openDialogWindow(self):
         self.dialog.show()
         self.dialog.raise_()
@@ -405,6 +406,7 @@ class MainWindow(QMainWindow):
         self.fiche_validation.show()
         self.fiche_validation.raise_()
         self.fiche_validation.activateWindow()
+        self.fiche_validation.init_controleurs_comboBox()
     
     def textPanel_Clear(self):
         self.ui.textEdit_panel.clear()
@@ -544,8 +546,7 @@ class FicheValidation(QDialog):
         print("Fiche Validation")
         self.ui.buttonBox.accepted.connect(self.createPDFFicheValidation)
         self.ui.buttonBox.rejected.connect(self.reject)
-        self.ui.pushButton_controleur_technique_ajout.clicked.connect(self.addControleurTechnique)
-        self.ui.pushButton_controleur_externe_ajout.clicked.connect(self.addControleurExterne)
+        
         self.ui.pushButton_num_serie_generer_auto.clicked.connect(self.genererNumSerie)
         self.init_controleurs_comboBox()
 
@@ -613,66 +614,14 @@ class FicheValidation(QDialog):
         donnees.numSerie = self.ui.lineEdit_num_serie.text()
         donnees.controleurTechnique = self.ui.comboBox_controleur_technique.currentText()
         donnees.controleurExterne = self.ui.comboBox_controleur_externe.currentText()
+        generatePDF.add_items_to_json('PDF/controleur_technique.json', donnees.controleurTechnique)
+        generatePDF.add_items_to_json('PDF/controleur_externe.json', donnees.controleurExterne)
+
         donnees.commentaires = self.getCommentaires()
         fiche = generatePDF.FicheValidation()
         output = fiche.generateFicheValidation(donnees.numSerie, donnees.controleurTechnique, donnees.controleurExterne, donnees.commentaires)
         fiche.writePDF(output) 
         self.accept()
-    
-    def addControleurTechnique(self):
-        donnees.numSerie = self.ui.lineEdit_num_serie.text()
-        self.ajoutTech = AjoutControleurTechnique()
-        self.ajoutTech.show()
-        self.reject()
-
-    def addControleurExterne(self):
-        donnees.numSerie = self.ui.lineEdit_num_serie.text()
-        self.ajoutExt = AjoutControleurExterne()
-        self.ajoutExt.show()
-        self.reject()
-
-
-class AjoutControleurTechnique(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.ui = Ui_AjoutControleur()
-        self.ui.setupUi(self)
-        self.setWindowTitle("Ajout Controleur Technique")
-        self.ui.buttonBox.accepted.connect(self.controleurAccept)
-        self.ui.buttonBox.rejected.connect(self.controleurRejected)
-    
-    def controleurAccept(self):
-        controleur = self.ui.lineEdit.text()
-        generatePDF.add_items_to_json('PDF/controleur_technique.json', controleur)
-        self.fiche = FicheValidation()
-        self.fiche.show()
-        self.accept()
-
-    def controleurRejected(self):
-        self.fiche = FicheValidation()
-        self.fiche.show()
-        self.reject()
-
-class AjoutControleurExterne(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.ui = Ui_AjoutControleur()
-        self.ui.setupUi(self)
-        self.setWindowTitle("Ajout Controleur Externe")
-        self.ui.buttonBox.accepted.connect(self.controleurAccept)
-        self.ui.buttonBox.rejected.connect(self.controleurRejected)
-    
-    def controleurAccept(self):
-        controleur = self.ui.lineEdit.text()
-        generatePDF.add_items_to_json('PDF/controleur_externe.json', controleur)
-        self.fiche = FicheValidation()
-        self.fiche.show()
-        self.accept()
-
-    def controleurRejected(self):
-        self.fiche = FicheValidation()
-        self.fiche.show()
-        self.reject()
 
 def main():
     app = QApplication([]) 
