@@ -4,7 +4,7 @@
 #include <Commun.h>
 #include <BluetoothSerial.h>
 
-#define ID_NB_TOURS 0xA0 //On reçoit le bombre de tours à faire sur 2 octets
+#define ID_NB_TOURS 0xA0 //On reçoit le nombre de tours à faire sur 2 octets
 #define ID_ACK_NB_TOURS 0xA1 //On accuse la réception
 
 #define ID_INITIALISATION_ARAL_EN_COURS 0xB0 //renvoi le nombre de tentative de com
@@ -35,9 +35,9 @@ public:
 
     void RxManage();
 
-    void sendMsg(Message txMsg);
-    void sendMsg(uint8_t id);
+    void sendMsg(Message &txMsg);
     void sendMsg(uint8_t id, uint8_t len, uint8_t *data);
+    void sendMsg(uint8_t id);
     void sendMsg(uint8_t id, uint8_t octet);
     void sendMsg(uint8_t id, uint8_t octet1, uint8_t octet2);
     void sendMsg(uint8_t id, uint16_t nb);

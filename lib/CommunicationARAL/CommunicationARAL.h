@@ -133,9 +133,15 @@ public:
     void end();
 
     void RxManage();
-    void sendMsg(Message txMsg);
-    void sendMsg(uint8_t id);
+    void sendMsg(Message &txMsg);
     void sendMsg(uint8_t id, uint8_t len, uint8_t *data);
+    void sendMsg(uint8_t id);
+    void sendMsg(uint8_t id, uint8_t octet);
+    void sendMsg(uint8_t id, uint8_t octet1, uint8_t octet2);
+    void sendMsg(uint8_t id, uint16_t nb);
+    void sendMsg(uint8_t id, uint32_t nb);
+    void sendMsg(uint8_t id, BilanTest &bilan);
+    void sendMsg(uint8_t id, EtatVoies &voies);
 
     void printMessage(Message msg);
 

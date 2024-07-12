@@ -47,10 +47,10 @@ void CommunicationPC::end()
 void CommunicationPC::onReceiveFunction(void) {
 
     static StateRx currentState = WAITING_HEADER;
-    static uint8_t dataCounter = 0;
+    static uint8_t dataCounter = 0, byte;
 
     while (availableData()) {
-        uint8_t byte = readData();
+        byte = readData();
         // Serial.printf("%2X ",byte);
         // _serial->write(byte);
         switch (currentState) {
@@ -250,13 +250,14 @@ void CommunicationPC::RxManage(){
     FIFO_lecture = (FIFO_lecture + 1) % SIZE_FIFO;
 }
 
-void CommunicationPC::sendMsg(Message txMsg){
+void CommunicationPC::sendMsg(Message &txMsg){
     static uint8_t *packet;
-    size_t lenght = 5;//les 2 Header, l'id, la len, le checksum, soit la taille minimal sans l'octet data
+    static size_t lenght;//les 2 Header, l'id, la len, le checksum, et la taille de la data. La taille minimal pour la data est de 1
+    
     if(txMsg.len){
-        lenght += txMsg.len;
+        lenght = 5 + txMsg.len;
     }else{
-        lenght += 1;//La taille minimal pour la data, meme si il y en a pas.
+        lenght = 6;//La taille minimal pour la data de 1, meme si il y en a pas, plus 5. Soit taille minimal total = 6
     }
     packet = new uint8_t[lenght];
 
@@ -282,15 +283,21 @@ void CommunicationPC::sendMsg(Message txMsg){
 }
 
 void CommunicationPC::sendMsg(uint8_t id){
-    Message txMsg = (Message){id, 0};
-    txMsg.data = new uint8_t[1];
-    txMsg.data[0] = 0;
+    static Message txMsg;
+
+    txMsg.id  = id;
+    txMsg.len  = 0;
+    txMsg.data = nullptr;
     sendMsg(txMsg);
 }
 
 void CommunicationPC::sendMsg(uint8_t id, uint8_t len, uint8_t *data){
-    Message txMsg = (Message){id, len};
+    static Message txMsg;
+
+    txMsg.id  = id;
+    txMsg.len  = len;
     txMsg.data = new uint8_t[txMsg.len];
+
     for (int i = 0; i < txMsg.len; i++)
     {
         txMsg.data[i] = data[i];
@@ -300,29 +307,38 @@ void CommunicationPC::sendMsg(uint8_t id, uint8_t len, uint8_t *data){
     delete[] txMsg.data;
 }
 
+
 void CommunicationPC::sendMsg(uint8_t id, uint8_t octet){
-    const uint8_t len = 1;
-    uint8_t data[len] = {octet};
+    static const uint8_t len = 1;
+    static uint8_t data[len];
+
+    data[0] = octet;
     sendMsg(id, len, data);
 }
 
+
 void CommunicationPC::sendMsg(uint8_t id, uint8_t octet1, uint8_t octet2){
-    const uint8_t len = 2;
-    uint8_t data[len] = {octet1, octet2};
+    static const uint8_t len = 2;
+    static uint8_t data[len];
+
+    data[0] = octet1;
+    data[1] = octet2;
     sendMsg(id, len, data);
 }
 
 void CommunicationPC::sendMsg(uint8_t id, uint16_t nb){
-    const uint8_t len = 2;
-    uint8_t data[len];
+    static const uint8_t len = 2;
+    static uint8_t data[len];
+
     data[0] = (uint8_t)((nb)    &0xFF);
     data[1] = (uint8_t)((nb>>8) &0xFF);
     sendMsg(id, len, data);
 }
 
 void CommunicationPC::sendMsg(uint8_t id, uint32_t nb){
-    const uint8_t len = 4;
-    uint8_t data[len];
+    static const uint8_t len = 4;
+    static uint8_t data[len];
+
     data[0] = (uint8_t)((nb)    &0xFF);
     data[1] = (uint8_t)((nb>>8) &0xFF);
     data[2] = (uint8_t)((nb>>16)&0xFF);
@@ -332,21 +348,23 @@ void CommunicationPC::sendMsg(uint8_t id, uint32_t nb){
 
 //Envoi du tableau voies du bilan
 void CommunicationPC::sendMsg(uint8_t id, BilanTest &bilan){
-    const uint8_t len = 96;
-    uint8_t data[len];
+    static const uint8_t len = 96;
+    static uint8_t data[len];
+
     memcpy(data, bilan.voies, len);
     sendMsg(id, len, data);
 }
 
 void CommunicationPC::sendMsg(uint8_t id, EtatVoies &voies){
-    const uint8_t len = 96;
-    uint8_t data[len], v[len];
+    static const uint8_t len = 96;
+    static uint8_t data[len], v[len];
+
     for (int i = 0; i < 96; i++)
     {
         v[i] = uint8_t(voies.voies[i]);
     }
     
-    memcpy(data, (v), len);
+    memcpy(data, (v), len);// Copie le contenu de v dans data
     sendMsg(id, len, data);
 }
 

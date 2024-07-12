@@ -13,7 +13,6 @@ CreateurTension::CreateurTension(CreateurTensionBUS Bus1, CreateurTensionBUS Bus
 CreateurTension::~CreateurTension()
 {
 }
-
 void CreateurTension::initOutput(){
     pinMode(_Bus1.pinA, OUTPUT);    pinMode(_Bus1.pinB, OUTPUT);
     pinMode(_Bus2.pinA, OUTPUT);    pinMode(_Bus2.pinB, OUTPUT);

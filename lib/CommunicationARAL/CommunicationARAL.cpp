@@ -33,11 +33,10 @@ void CommunicationARAL::end()
 void CommunicationARAL::onReceiveFunction(void) {
 
     static StateRx currentState = WAITING_HEADER;
-    static uint8_t dataCounter = 0;
+    static uint8_t dataCounter = 0, byte;
 
     while (availableData()) {
-        uint8_t byte = readData();
-        
+        byte = readData();
         //Serial.printf("%2X ",byte);
 
         switch (currentState) {
@@ -180,9 +179,11 @@ void CommunicationARAL::RxManage(){
 }
 
 //Envoi d'un message du uC à la carte Aral
-void CommunicationARAL::sendMsg(Message txMsg){
+void CommunicationARAL::sendMsg(Message &txMsg){
     static uint8_t *packet;
-    size_t lenght = (MIN_SIZE + txMsg.len);
+    static size_t lenght;
+
+    lenght = (MIN_SIZE + txMsg.len);
     packet = new uint8_t[lenght];
 
     packet[0] = HEADER_DEBUT;
@@ -216,20 +217,24 @@ void CommunicationARAL::sendMsg(Message txMsg){
     delete[] packet; // Libérer la mémoire allouée pour les données
 }
 
-//Sans bloc INFOS
+//Sans bloc INFOS, à priori
 void CommunicationARAL::sendMsg(uint8_t id){
-    Message txMsg = (Message){id, 0};
-    txMsg.data = new uint8_t[1];
-    txMsg.data[0] = 0;
+    static Message txMsg;
+
+    txMsg.id  = id;
+    txMsg.len  = 0;
+    txMsg.data = nullptr;
     sendMsg(txMsg);
 }
 
 //Avec bloc INFOS
 void CommunicationARAL::sendMsg(uint8_t id, uint8_t len, uint8_t *data){
-    Message txMsg;
+    static Message txMsg;
+
     txMsg.id = id;
     txMsg.len = len;
     txMsg.data = new uint8_t[txMsg.len];
+
     for (int i = 0; i < txMsg.len; i++)
     {
         txMsg.data[i] = data[i];
@@ -237,6 +242,45 @@ void CommunicationARAL::sendMsg(uint8_t id, uint8_t len, uint8_t *data){
     sendMsg(txMsg);
 
     delete[] txMsg.data;
+}
+
+
+void CommunicationARAL::sendMsg(uint8_t id, uint8_t octet){
+    static const uint8_t len = 1;
+    static uint8_t data[len];
+
+    data[0] = octet;
+    sendMsg(id, len, data);
+}
+
+
+void CommunicationARAL::sendMsg(uint8_t id, uint8_t octet1, uint8_t octet2){
+    static const uint8_t len = 2;
+    static uint8_t data[len];
+
+    data[0] = octet1;
+    data[1] = octet2;
+    sendMsg(id, len, data);
+}
+
+void CommunicationARAL::sendMsg(uint8_t id, uint16_t nb){
+    static const uint8_t len = 2;
+    static uint8_t data[len];
+
+    data[0] = (uint8_t)((nb)    &0xFF);
+    data[1] = (uint8_t)((nb>>8) &0xFF);
+    sendMsg(id, len, data);
+}
+
+void CommunicationARAL::sendMsg(uint8_t id, uint32_t nb){
+    static const uint8_t len = 4;
+    static uint8_t data[len];
+
+    data[0] = (uint8_t)((nb)    &0xFF);
+    data[1] = (uint8_t)((nb>>8) &0xFF);
+    data[2] = (uint8_t)((nb>>16)&0xFF);
+    data[3] = (uint8_t)((nb>>24)&0xFF);
+    sendMsg(id, len, data);
 }
 
 bool CommunicationARAL::checkACK(bool afterCkeck){
@@ -254,7 +298,6 @@ bool CommunicationARAL::checkRepeatRequest(bool afterCkeck){
     }
     return false;
 }
-
 
 bool CommunicationARAL::MsgAvecBlocINFOS(uint8_t ID){
     bool blocAvecINFOS = false;

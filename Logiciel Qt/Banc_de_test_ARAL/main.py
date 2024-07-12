@@ -325,7 +325,6 @@ class MainWindow(QMainWindow):
                 self.ui.textEdit_panel.append(f"ID_REPEAT_REQUEST : le banc de test n'a pas compris, message incohérent")
             case _:
                 self.ui.textEdit_panel.append(f"Received message from an unknown ID")
-
         self.FIFO_lecture = (self.FIFO_lecture + 1) % SIZE_FIFO
 
     def sendMsg(self, msg = Message()):
@@ -422,6 +421,9 @@ class MainWindow(QMainWindow):
         voies.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
         voies.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
         voies.perteDeCom = 0
+
+        self.bilan_window.update_states()
+        self.state_window.update_states()
         
     def QuitWindows(self):
         self.close()

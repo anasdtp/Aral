@@ -259,9 +259,11 @@
    <addaction name="actionDisconnect"/>
    <addaction name="actionClearLog"/>
    <addaction name="separator"/>
-   <addaction name="actionTableau_Voies_en_Cours"/>
-   <addaction name="actionFicheValidation"/>
    <addaction name="actionReset"/>
+   <addaction name="separator"/>
+   <addaction name="actionTableau_Voies_en_Cours"/>
+   <addaction name="separator"/>
+   <addaction name="actionFicheValidation"/>
   </widget>
   <action name="actionTableau_Voies_Bilan">
    <property name="text">
