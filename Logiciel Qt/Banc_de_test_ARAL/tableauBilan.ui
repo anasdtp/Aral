@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1325</width>
-    <height>416</height>
+    <width>1174</width>
+    <height>344</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,10 +18,13 @@
     <rect>
      <x>11</x>
      <y>11</y>
-     <width>1311</width>
-     <height>411</height>
+     <width>1160</width>
+     <height>330</height>
     </rect>
    </property>
+   <attribute name="horizontalHeaderDefaultSectionSize">
+    <number>110</number>
+   </attribute>
    <row>
     <property name="text">
      <string>01--10</string>

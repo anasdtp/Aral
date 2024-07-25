@@ -5,7 +5,7 @@
 #include <Commun.h>
 #include <CommunicationARAL.h>
 #include <CommunicationPC.h>
-#include <IHM.h>
+#include <IHM_secondVersion.h>
 
 
 typedef struct etatVoieTestee{

@@ -22,7 +22,7 @@ class Ui_tableauVoies(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(1325, 416)
+        Dialog.resize(1174, 344)
         self.tableWidget = QTableWidget(Dialog)
         if (self.tableWidget.columnCount() < 10):
             self.tableWidget.setColumnCount(10)
@@ -71,7 +71,8 @@ class Ui_tableauVoies(object):
         __qtablewidgetitem20 = QTableWidgetItem()
         self.tableWidget.setItem(0, 0, __qtablewidgetitem20)
         self.tableWidget.setObjectName(u"tableWidget")
-        self.tableWidget.setGeometry(QRect(11, 11, 1311, 411))
+        self.tableWidget.setGeometry(QRect(11, 11, 1160, 330))
+        self.tableWidget.horizontalHeader().setDefaultSectionSize(110)
 
         self.retranslateUi(Dialog)
 

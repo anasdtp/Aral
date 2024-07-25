@@ -16,7 +16,7 @@ void General::IHMBegin()
 {
     IHM_begin();
     setLedColor(NUM_PIXELS, WHITE);
-    printMidOLED("Banc de\ntest\nARAL", 2, 1);
+    printMidOLED("Banc de\ntest ARAL", 2);
 }
 
 void General::run(){
@@ -90,6 +90,10 @@ void General::txLoop(){
       //Serial.println("Communication carte ARAL initialisée !");
       _pc->sendMsg(ID_INITIALISATION_ARAL_FAITE);
       nbToursFait = 0;
+      for (uint8_t i = 0; i < 96; i++)
+      {
+        bilan.tempsReponse[i] = 0;
+      }
     }
     //Test Bilan a commenté: 
     // for (int i = 0; i < 96; i++)
@@ -163,7 +167,7 @@ bool General::initialisationARAL(){
     case RESET:{
       static int nb_essais = 0;
       //Serial.println("INITIALISATION CARTE ARAL...");
-      printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur , 1, 1);
+      printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur, 1);
       _com->ACK.id = ID_RESET;
       _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_RESET;
       _com->sendMsg(_com->ACK.id);
@@ -182,7 +186,7 @@ bool General::initialisationARAL(){
     }
     break;
     case PREMIERE_SCRUTATION:{
-      printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur , 1, 1);
+      printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur, 1);
       _com->ACK.id = ID_PREMIERE_SCRUTATION;
       _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
       _com->sendMsg(_com->ACK.id);
@@ -232,7 +236,7 @@ bool General::initialisationARAL(){
       }
       else if(_com->checkRepeatRequest()){
         //Serial.println("La carte ARAL demande une repetition du dernier message...");
-        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1, 1);
+        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1);
         _com->sendMsg(_com->ACK.id);
         color[0] = BLUE;
       }
@@ -301,6 +305,11 @@ bool General::TestComCarteARAL(BilanTest &bilan){
             voieActuelle = 1;
             nbToursFait++;
             _pc->sendMsg(ID_TEST_EN_COURS, bilan);
+            _pc->sendMsgTempsDeReponse(ID_TEST_TEMPS_DE_REPONSE_FILTRAGE, bilan);
+            for (uint8_t i = 0; i < 96; i++)
+            {
+              bilan.tempsReponse[i] = 0;
+            }
           }
         }
         etape = 1;
@@ -351,7 +360,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       getTension(voies);
       _pc->sendMsg(ID_ETAT_VOIES, voies);
       //Serial.printf("Test de la voie %2d, alarme %s", voieActuelle, alarmeText[alarmeActuelle]);
-      if(voieActuelle > 0 && voieActuelle < 96){
+      if(voieActuelle > 0 && voieActuelle <= 96){
         if(voies.voies[voieActuelle-1] == alarmeActuelle){
           if(bilan.voies[voieActuelle-1] != VOIE_EN_DEFAUT){
             bilan.voies[voieActuelle-1] = VOIE_OK;
@@ -361,18 +370,62 @@ bool General::TestComCarteARAL(BilanTest &bilan){
             // bilan.voies[voieActuelle-1] = false;
             //Serial.println(" Okay sur cette alarme mais sur d'autres alarmes non !");
           // }
-        }else{
-          //Serial.println(" LA VOIE N'EST PAS BONNE!!");
-          bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
+          
+          uint8_t diziemeDeSeconde = (millis() - startTimeVoie)/100;//En dizieme de seconde car la valeur est sur un octet, soit 255 au max
+          if(diziemeDeSeconde >= bilan.tempsReponse[voieActuelle - 1]){
+            bilan.tempsReponse[voieActuelle - 1] = diziemeDeSeconde;
+            //Serial.printf(" Temps de réponse : %d\n", diziemeDeSeconde);
+          }
+          
+          etat = SELECTION_DE_VOIE;
+          etape = 1;
+        }
+        else{
+          //Ici verifier si filtrage est activé, 
+                       //si oui alors verifié si startTimeVoie n'est pas superieur à TIMEOUT_ACK
+                                            //si oui alors la voie est en defaut
+                                            //si non, on refait la DIFINITIVE_SCRUTATION avec _com->sendMsg(_com->ACK.id);
+           
+          if(_pc->isFiltrageTrue()){
+            if(millis() - startTimeVoie > TIMEOUT_ACK){
+              //Alors la carte aral à un probléme sur cette voie car elle met au maximum 4 secondes pour prendre en compte l'alarme normalement
+              bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
+              bilan.tempsReponse[voieActuelle - 1] = millis() - startTimeVoie;
+              //Serial.println(" LA VOIE N'EST PAS BONNE!!");
+              etat = SELECTION_DE_VOIE;
+              etape = 1;
+            }
+            else{
+              //Alors c'est normal que l'etat reste le meme et on attend que la carte ARAL prend en compte l'alarme
+              //On repete la phase com pour recuperer le tableau des 96 voies
+              // etat = PREMIERE_SCRUTATION;
+              
+              _com->ACK.id = ID_PREMIERE_SCRUTATION;
+              _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
+              _com->sendMsg(_com->ACK.id);
+              etape = 2;
+              etat_suiv = etat_init[etape];
+              etat = ATT_ACK;
+            }
+          }
+          else{
+            //Serial.println(" LA VOIE N'EST PAS BONNE!!");
+            bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
+            etat = SELECTION_DE_VOIE;
+            etape = 1;
+          }
         }
         _pc->sendMsg(ID_ETAT_UNE_VOIE, (uint8_t)voieActuelle, (uint8_t)bilan.voies[voieActuelle-1]);
+        _pc->sendMsg(ID_TEST_TEMPS_DE_REPONSE_FILTRAGE_UNE_VOIE, (uint8_t)voieActuelle, (uint8_t)bilan.tempsReponse[voieActuelle - 1]);
         displayEtatVoie(voieActuelle, alarmeText[alarmeActuelle], bilan.voies[voieActuelle-1]);
 
         LedAlarmeActuelle(alarmeActuelle);
         LedEtatVoieActuelle(bilan.voies[voieActuelle-1]);
       }
-      etat = SELECTION_DE_VOIE;
-      etape = 1;
+      else{
+        etat = SELECTION_DE_VOIE;
+        etape = 1;
+      }
     }
     break;
     case ATT_ACK:{
@@ -391,14 +444,14 @@ bool General::TestComCarteARAL(BilanTest &bilan){
         //Serial.println("La carte ARAL demande une repetition du dernier message...");
         _com->sendMsg(_com->ACK.id);
         setLedColor(NUM_PIXELS, BLUE);
-        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1, 1);
+        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1);
         _pc->sendMsg(ID_CARTE_ARAL_REPEAT_REQUEST, (uint8_t)_com->ACK.id);
       }
       else if((millis() - startTimeVoie)> TIMEOUT_ACK){
         startTimeVoie = millis();
         //Serial.println("La carte ARAL ne repond pas !");
         //Serial.println("Commande RESET ARAL...");
-        printMidOLED("La carte ARAL \n ne repond pas ! \n Verifier les connexions", 1, 1);
+        printMidOLED("La carte ARAL \n ne repond pas ! \n Verifier les connexions", 1);
         setLedColor(NUM_PIXELS, BLUE);
         _com->sendMsg(_com->ACK.id);
         _pc->sendMsg(ID_CARTE_ARAL_NE_REPOND_PLUS, (uint8_t)_com->ACK.id);

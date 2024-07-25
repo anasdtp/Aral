@@ -111,7 +111,7 @@ ID_DIFINITIVE_SCUTATION :
 #define ETAT_NORMAL 0x30
 #define ETAT_CONGRUENCE 0x70
 
-#define TIMEOUT_ACK 4000 //ms
+#define TIMEOUT_ACK 5000 //ms, timeout à la fois de reponse com et de prise en compte de l'alarme
 
 typedef struct AlarmeVoies{
     uint8_t voies[96];

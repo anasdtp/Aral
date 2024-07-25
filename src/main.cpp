@@ -5,7 +5,7 @@
 #include <SelectionDeLaVoie.h>
 #include <CommunicationARAL.h>
 #include <CommunicationPC.h>
-#include <IHM.h>
+#include <IHM_secondVersion.h>
 #include <General.h>
 
 //On renseigne les 2 pins du bus 2 bits createur de tension. Si le bus est égale à 0x0, COURT_CIRCUIT, 0x1 ALARME, 0x2 NORMAL et 0x3 CONGRUENCE.

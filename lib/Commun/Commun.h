@@ -16,6 +16,7 @@ typedef struct EtatVoies{
 typedef struct BilanTest{
   uint8_t voies[96]; //Si VOIE_OK, voie fonctionnelle, si VOIE_EN_DEFAUT voie HS
   int nbToursFait;
+  uint8_t tempsReponse[96];//Si filtrage activé, temps de reponse de chaque voies, //En dizieme de seconde car la valeur est sur un octet, soit 255 au max
 }BilanTest;
 
 

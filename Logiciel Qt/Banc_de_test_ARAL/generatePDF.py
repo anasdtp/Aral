@@ -6,16 +6,14 @@ import io
 import json
 from datetime import datetime
 
-CommentaireCarteFonctionnelle = """
-• Vérification de la connectique et straps.
+CommentaireCarteFonctionnelle = """• Vérification de la connectique et straps.
 • Mesure et vérification des tensions appliqués sur la carte.
 • Vérification de l’émission / réception.
 • Vérification des cinq états de chaque voie sur les 96 voies
   (Ligne ouverte ; Congruence ; Normal ; Alarme ; Ligne en court-circuit).
 • Test en endurance sur banc de test ARAL.
 """
-CommentaireCarteMinimal = """
-• Vérification de la connectique et straps.
+CommentaireCarteMinimal = """• Vérification de la connectique et straps.
 • Mesure et vérification des tensions appliqués sur la carte.
 • Vérification de l’émission / réception.
 """
@@ -117,39 +115,46 @@ def add_items_to_json(filePath, new_item):
         json.dump(items, file)
     
 class FicheValidation():
-    def generateFicheValidation(self, numSerie = "", controleurTechnique = "", controleurExterne = "", Commentaire = CommentaireCarteFonctionnelle, Date = None, Reference = "Z8884306", Gamme = "40150069184002D"):
+    def generateFicheValidation(self, numSerie = "", controleurTechnique = "", controleurExterne = "", Commentaire = CommentaireCarteFonctionnelle, Date = None, Designation = "Carte ARAL", Reference = "Z8884306", Gamme = "40150069184002D", PosteDeTest = "Banc de test carte ARAL"):
         new_pdf = []
         
+        yDeBase = 115
+
         # pdf = createPDFText("|______________________________", 100, 100)
         # new_pdf.append(pdf)
         # pdf = createPDFText("|______________________________", 100, 300)
         # new_pdf.append(pdf)
-        
-        pdf = createPDFText(Reference, 103, 653)
+        pdf = createPDFText(Designation, yDeBase, 685)
         new_pdf.append(pdf)
         
-        pdf = createPDFText(numSerie, 99, 632)
+        pdf = createPDFText(Reference, yDeBase, 663)
         new_pdf.append(pdf)
         
-        pdf = createPDFText(Gamme, 125, 560)
+        pdf = createPDFText(numSerie, yDeBase, 642)
         new_pdf.append(pdf)
         
-        pdf = createPDFText(Commentaire, 55, 550)
+        pdf = createPDFText(Gamme, yDeBase, 572)
+        new_pdf.append(pdf)
+
+        pdf = createPDFText(PosteDeTest, yDeBase, 550)
+        new_pdf.append(pdf)
+        
+        pdf = createPDFText(Commentaire, yDeBase, 529)
         new_pdf.append(pdf)
             
-        pdf = createPDFText(controleurTechnique, 180, 123)
+        pdf = createPDFText(controleurTechnique, yDeBase + 100, 142)
         new_pdf.append(pdf)
         
-        pdf = createPDFText(controleurExterne, 180, 87)
+        pdf = createPDFText(controleurExterne, yDeBase + 100, 98)
         new_pdf.append(pdf)
         
         if(Date is None):
             Date = get_current_date_string()
         
-        pdf = createPDFText(Date, 480, 123)
+        pdf = createPDFText(Date, yDeBase + 381, 141)
         new_pdf.append(pdf)
             
-        pdf = createPDFText(Date, 480, 87)
+        pdf = createPDFText(Date, yDeBase + 381, 98)
         new_pdf.append(pdf)
         
         with open('PDF/fiche_validation_aral_vierge.pdf', "rb") as input_file:

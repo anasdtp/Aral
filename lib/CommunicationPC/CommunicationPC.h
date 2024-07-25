@@ -9,12 +9,14 @@
 
 #define ID_INITIALISATION_ARAL_EN_COURS 0xB0 //renvoi le nombre de tentative de com
 #define ID_INITIALISATION_ARAL_FAITE 0xB1 //ne renvoi rien
-#define ID_TEST_EN_COURS 0xB2 //envoi le bilan de test du tours effectué
-#define ID_TEST_TERMINEE 0xB3 //envoi le bilan de test
+#define ID_TEST_EN_COURS 0xB2 //envoi le bilan de test du tours effectué, tableau des 96 voies
+#define ID_TEST_TERMINEE 0xB3 //envoi le bilan de test, tableau des 96 voies
 #define ID_ETAT_VOIES 0xB4 //Envoi de l'etat des voies directement de la carte ARAL au PC
 #define ID_ETAT_UNE_VOIE 0xB5 //Envoi de l'etat d'une voie en defaut ou ok avec data[0]->(Num de la voie) et data[1]->(Etat, OK=0x30, Defaut = 0x10, non testée = 0)
 #define ID_CARTE_ARAL_NE_REPOND_PLUS 0xB6
 #define ID_CARTE_ARAL_REPEAT_REQUEST 0xB7
+#define ID_TEST_TEMPS_DE_REPONSE_FILTRAGE 0xB8 //Si jamais le filtrage est activé, Envoi du temps de réponse des 96 voies, tableau de 96 cases, en dizieme de seconde
+#define ID_TEST_TEMPS_DE_REPONSE_FILTRAGE_UNE_VOIE 0xB9 //Envoi du temps de reponse d'une seule voie avec data[0]->(Num de la voie) et data[1]->dizieme de secondes
 
 #define ID_ACK_GENERAL 0xC0 //Ack pour tous le reste
 #define ID_RELANCER_TEST 0xC1
@@ -24,6 +26,7 @@
 #define ID_REQUEST_NB_TOURS_FAIT 0xD1
 #define ID_ACK_REQUEST_NB_TOURS_FAIT 0xD2
 #define ID_REQUEST_BILAN 0xD3 //Reponse avec l'id ID_TEST_TERMINEE si terminée sinon ID_TEST_EN_COURS si test en cours
+#define ID_SET_FILTRAGE 0xD4 //Filtrage des alarmes en fonction des switch SW2. Filtrage = etat stable pendant un temps desiré (etat stable = ne prends pas en compte les changements)
 
 class CommunicationPC
 {
@@ -43,6 +46,7 @@ public:
     void sendMsg(uint8_t id, uint16_t nb);
     void sendMsg(uint8_t id, uint32_t nb);
     void sendMsg(uint8_t id, BilanTest &bilan);
+    void sendMsgTempsDeReponse(uint8_t id, BilanTest &bilan);
     void sendMsg(uint8_t id, EtatVoies &voies);
     void printMessage(Message msg);
 
@@ -81,12 +85,21 @@ public:
       return false;
     }
 
+    void setFiltrage(bool filtrage){
+      _filtrage = filtrage;
+    }
+    bool isFiltrageTrue(){
+      return _filtrage;
+    }
+
 private:
     HardwareSerial *_serial;
     BluetoothSerial *_serialBT;
     Message rxMsg[SIZE_FIFO]; int FIFO_ecriture;
 
-    int NBTOURS; bool _resetTestRequest, _StopTestRequest, _NbToursFaitRequest, _BilanRequest;
+    int NBTOURS; 
+    bool _resetTestRequest, _StopTestRequest, _NbToursFaitRequest, _BilanRequest;
+    bool _filtrage;//Flag pour savoir si le filtrage est activé ou non
 
     // État de la réception
     enum StateRx{

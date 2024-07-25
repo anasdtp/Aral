@@ -1,10 +1,9 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit, QDialog, QVBoxLayout, QTableWidgetItem, QPushButton, QTableWidget
 from PySide6.QtCore import QThread, Signal, Slot, QTimer
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QIcon
 import serial
 import serial.tools.list_ports
-import struct
 import json
 import time
 from ui_mainwindow import Ui_MainWindow
@@ -12,6 +11,7 @@ from ui_dialog import Ui_Dialog
 from ui_tableauVoies import Ui_tableauVoies
 import generatePDF
 from ui_ficheValidation import Ui_FicheValidation
+from ui_switch import Ui_Switch
 #Pour actualiser : 
 #   pyside6-rcc -o Ressources_rc.py Ressources.qrc
 #   pyside6-uic mainwindow.ui -o ui_mainwindow.py
@@ -20,75 +20,7 @@ from ui_ficheValidation import Ui_FicheValidation
 #   pyside6-uic ficheValidation.ui -o ui_ficheValidation.py
 #   pyside6-uic ajoutControleur.ui -o ui_ajoutControleur.py 
 
-SERIAL_BAUDRATE = 921600
-
-ID_NB_TOURS     = 0xA0 #On envoi le nombre de tours à faire sur 2 octets
-ID_ACK_NB_TOURS = 0xA1 #RIEN
-
-ID_INITIALISATION_ARAL_EN_COURS = 0xB0 #Reception du nombre de tentative de com
-ID_INITIALISATION_ARAL_FAITE    = 0xB1 #RIEN
-ID_TEST_EN_COURS = 0xB2 #Reception du bilan de test du tours effectué
-ID_TEST_TERMINEE = 0xB3 #Reception du bilan de test
-ID_ETAT_VOIES = 0xB4 #Reception de l'etat des voies directement de la carte ARAL
-ID_ETAT_UNE_VOIE = 0xB5 #Reception de l'etat d'une voie en defaut ou ok avec data[0]->(Num de la voie) et data[1]->(Etat, OK=0x30, Defaut = 0x10, non testée = 0)
-ID_CARTE_ARAL_NE_REPOND_PLUS = 0xB6
-ID_CARTE_ARAL_REPEAT_REQUEST = 0xB7
-
-ID_ACK_GENERAL      = 0xC0
-ID_RELANCER_TEST    = 0xC1
-ID_ARRET_TEST       = 0xC2
-ID_REPEAT_REQUEST   = 0xD0
-ID_REQUEST_NB_TOURS_FAIT = 0xD1
-ID_ACK_REQUEST_NB_TOURS_FAIT = 0xD2
-ID_REQUEST_BILAN = 0xD3
-
-class Message():
-    def __init__(self, id=0, length=0, data=None, checksum=0):
-        self.id = id
-        self.len = length
-        self.data = data if data else []
-        self.checksum = checksum
-
-    def build_packet(self):
-        # Calculate checksum as a simple example
-        self.checksum = (self.id ^ self.len) & 0xFF
-        for i in range(self.len):
-            self.checksum ^= self.data[i]
-        length = self.len if(self.len) else 1
-        # Construct the packet with start marker, ID, length, data, checksum, and end marker
-        packet_format = f'<B B B {length}s B B'
-        packet_data = bytes(self.data)
-        return struct.pack(packet_format, 0xFF, self.id, self.len, packet_data, self.checksum, 0xFF)
-
-SIZE_FIFO = 32
-class COMMUNICATION():
-    def __init__(self):
-        self.rxMsg = [Message() for _ in range(SIZE_FIFO)]
-        self.FIFO_Ecriture = 0
-        self.serial_thread = None
-        self.ecritureEnCours = False #Flag pour faire savoir qu'on a lancé une ecriture
-        self.problemeEnEcriture = False #Flag pour dire que le serial.write n'a pas fonctionné
-com = COMMUNICATION()
-
-NOMBRE_VOIES = 96
-
-etatBilan = {
-    "test non fait" : 0,
-    "OK" : 0x30,
-    "DEFAUT" : 0x10,
-}
-etatVoies = {
-    "COURT_CIRCUIT" : 0,
-    "ALARME" : 1,
-    "NORMAL" : 2,
-    "CONGRUENCE" : 3,
-}
-class VOIE():
-    def __init__(self):
-        self.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
-        self.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
-        self.perteDeCom = 0
-voies = VOIE()
+from donnees import *
 
 class SerialThread(QThread):
     # message_received = Signal(bytes)
@@ -208,9 +140,12 @@ class MainWindow(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("Banc de test carte ARAL")
+        self.setWindowIcon(QIcon('logo.ico'))
+
         self.ui.sendButton_nbTours.clicked.connect(self.sendNbTours)
         self.ui.sendButton_repriseTest.clicked.connect(self.sendRelancerTest)
         self.ui.sendButton_arret.clicked.connect(self.sendArretTest)
+        self.ui.sendButton_activer_filtrage.clicked.connect(self.sendFiltrage)
 
         self.dialog = Dialog()
         self.dialog.ui.buttonBox.accepted.connect(self.start_serial)
@@ -218,9 +153,11 @@ class MainWindow(QMainWindow):
         self.bilan_window = BilanWindow()
         self.state_window = StateWindow()
         self.fiche_validation = FicheValidation()
+        self.switchARAL = SwitchAral()
         self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openBilanWindow)
         self.ui.actionTableau_Voies_en_Cours.triggered.connect(self.openStateWindow)
         self.ui.actionFicheValidation.triggered.connect(self.openFicheValidation)
+        self.ui.action_reglage_du_switch_SW2.triggered.connect(self.openSwitchARAL)
 
         self.ui.actionQuit.triggered.connect(self.QuitWindows)
         self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
@@ -317,12 +254,30 @@ class MainWindow(QMainWindow):
             case 0xB7:#ID_CARTE_ARAL_REPEAT_REQUEST
                 self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_CARTE_ARAL_REPEAT_REQUEST : la carte aral demande de repeter le message")
+            case 0xB8:#ID_TEST_TEMPS_DE_REPONSE_FILTRAGE
+                # voies.tempsDeReponse = com.rxMsg[self.FIFO_lecture].data / 10.0 #reçu en diziéme de secondes, convertit lors du stockage ici en secondes
+                for i in range(96):
+                    voies.tempsDeReponse[i] = com.rxMsg[self.FIFO_lecture].data[i] / 10.0
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"ID_TEST_TEMPS_DE_REPONSE_FILTRAGE : Reception des temps de reponse de chaque voies")
+            case 0xB9:#ID_TEST_TEMPS_DE_REPONSE_FILTRAGE_UNE_VOIE
+                numVoie = com.rxMsg[self.FIFO_lecture].data[0]
+                tempsDeReponse = com.rxMsg[self.FIFO_lecture].data[1] / 10.0 #reçu en diziéme de secondes, convertit lors du stockage ici en secondes
+                if(numVoie>0 and numVoie<=96):
+                    voies.tempsDeReponse[numVoie-1] = tempsDeReponse
+                    self.ui.textEdit_panel.append(f"")
+                    self.ui.textEdit_panel.append(f"ID_TEST_TEMPS_DE_REPONSE_FILTRAGE_UNE_VOIE : temps de reponse de la voie n°"+ str(numVoie) +" : " + str(tempsDeReponse) +" secondes")
             case 0xC0:#ID_ACK_GENERAL
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_ACK_GENERAL : reponse gen")
+                self.ui.textEdit_panel.append(f"ID_ACK_GENERAL : reponse gen, " + idComEnText[com.rxMsg[self.FIFO_lecture].data[0]])
             case 0xD0:#ID_REPEAT_REQUEST
                 self.ui.textEdit_panel.append(f"")
                 self.ui.textEdit_panel.append(f"ID_REPEAT_REQUEST : le banc de test n'a pas compris, message incohérent")
+            case 0xD2:#ID_ACK_REQUEST_NB_TOURS_FAIT
+                nbToursFait = com.rxMsg[self.FIFO_lecture].data[0] + com.rxMsg[self.FIFO_lecture].data[1]<<8
+                voies.nombreDeTourFait = nbToursFait
+                self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel.append(f"ID_ACK_REQUEST_NB_TOURS_FAIT : Nombre de tours fait : " + str(nbToursFait))
             case _:
                 self.ui.textEdit_panel.append(f"Received message from an unknown ID")
         self.FIFO_lecture = (self.FIFO_lecture + 1) % SIZE_FIFO
@@ -380,6 +335,17 @@ class MainWindow(QMainWindow):
         print("sendArretTest called")
         self.sendEmpty(ID_ARRET_TEST)
     
+    def sendFiltrage(self): #  ----  FILTRAGE ---- Filtrage = etat stable pendant un temps desiré (etat stable = ne prends pas en compte les changements)
+        print("sendFiltrage called")
+        activer = 1
+        if(self.ui.sendButton_activer_filtrage.text() == "Activer Filtrage"):
+            activer = 1
+            self.ui.sendButton_activer_filtrage.setText("Désactiver Filtrage")
+        else:
+            activer = 0
+            self.ui.sendButton_activer_filtrage.setText("Activer Filtrage")
+        self.sendByte(ID_SET_FILTRAGE, activer)
+    
     def send128Tours(self):
         print("send128Tours called")
         self.sendRelancerTest()
@@ -407,6 +373,11 @@ class MainWindow(QMainWindow):
         self.fiche_validation.activateWindow()
         self.fiche_validation.init_controleurs_comboBox()
     
+    def openSwitchARAL(self):
+        self.switchARAL.show()
+        self.switchARAL.raise_()
+        self.switchARAL.activateWindow()
+    
     def textPanel_Clear(self):
         self.ui.textEdit_panel.clear()
     
@@ -418,7 +389,7 @@ class MainWindow(QMainWindow):
     def resetStruct(self):
         self.ui.textEdit_panel.append(f"")
         self.ui.textEdit_panel.append(f"-----------Refraichissement...")
-        voies.voies = [etatVoies["CONGRUENCE"] for _ in range(NOMBRE_VOIES)]
+        voies.voies = [etatVoies["NONE"] for _ in range(NOMBRE_VOIES)]
         voies.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
         voies.perteDeCom = 0
 
@@ -435,6 +406,7 @@ class MainWindow(QMainWindow):
         self.state_window.close()
         self.bilan_window.close()
         self.fiche_validation.close()
+        self.switchARAL.close()
         super().closeEvent(event)
 #end MainWindow
 
@@ -444,6 +416,7 @@ class Dialog(QDialog):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.setWindowTitle("CHOIX PORT COM")
+        self.setWindowIcon(QIcon('logo.ico'))
         # self.ui.buttonBox.accepted.connect(self.start_serial) #Fait dans la mainwindow
         self.ui.buttonBox.rejected.connect(self.reject)
         self.populate_com_ports()
@@ -474,6 +447,7 @@ class BilanWindow(QDialog):
         self.ui.setupUi(self)
         self.update_states()
         self.setWindowTitle("Bilan de test")
+        self.setWindowIcon(QIcon('logo.ico'))
 
     # @Slot(list)
     def update_states(self):
@@ -503,6 +477,7 @@ class StateWindow(QDialog):
         self.ui.setupUi(self)
         self.update_states()
         self.setWindowTitle("Etat Voies en Cours, envoyé par la carte ARAL")
+        self.setWindowIcon(QIcon('logo.ico'))
 
     # @Slot(list)
     def update_states(self):
@@ -515,18 +490,23 @@ class StateWindow(QDialog):
                 item = QTableWidgetItem()
                 
                 if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
-                    item.setText('Court-Circuit')
-                    item.setBackground(QColor("darkCyan"))
+                    text = 'Court-Circuit, ' + str(voies.tempsDeReponse[index]) + ' s'
+                    color = QColor("darkCyan")
                 elif voies.voies[index] == etatVoies["ALARME"]:
-                    item.setText('Alarme')
-                    item.setBackground(QColor("darkMagenta"))
+                    text = 'Alarme, ' + str(voies.tempsDeReponse[index]) + ' s'
+                    color = QColor("darkMagenta")
                 elif voies.voies[index] == etatVoies["NORMAL"]:
-                    item.setText('Normal')
-                    item.setBackground(QColor("green"))
+                    text = 'Normal, ' + str(voies.tempsDeReponse[index]) + ' s'
+                    color = QColor("green")
                 elif voies.voies[index] == etatVoies["CONGRUENCE"]:
-                    item.setText('Congruence')
-                    item.setBackground(QColor("gray"))
+                    text = 'Congruence, ' + str(voies.tempsDeReponse[index]) + ' s'
+                    color = QColor("gray")
+                else:
+                    text = ''
+                    color = QColor("gray")
                 
+                item.setText(text)
+                item.setBackground(color)
 
 
                 self.ui.tableWidget.setItem(i, j, item)
@@ -545,6 +525,7 @@ class FicheValidation(QDialog):
         self.ui = Ui_FicheValidation()
         self.ui.setupUi(self)
         self.setWindowTitle("Etat Voies en Cours, envoyé par la carte ARAL")
+        self.setWindowIcon(QIcon('logo.ico'))
         print("Fiche Validation")
         self.ui.buttonBox.accepted.connect(self.createPDFFicheValidation)
         self.ui.buttonBox.rejected.connect(self.reject)
@@ -624,6 +605,20 @@ class FicheValidation(QDialog):
         output = fiche.generateFicheValidation(donnees.numSerie, donnees.controleurTechnique, donnees.controleurExterne, donnees.commentaires)
         fiche.writePDF(output) 
         self.accept()
+
+class SwitchAral(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_Switch()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Switch ARAL")
+        self.setWindowIcon(QIcon('switch.png'))
+
+        self.ui.buttonBox.accepted.connect(self.switch_aral)
+        self.ui.buttonBox.rejected.connect(self.reject)
+    
+    def switch_aral(self):
+        pass
 
 def main():
     app = QApplication([]) 

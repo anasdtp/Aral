@@ -14,5 +14,7 @@
         <file>images/refresh.png</file>
         <file>images/sd.png</file>
         <file>images/sd_icon.png</file>
+        <file>images/logo.ico</file>
+        <file>images/switch.png</file>
     </qresource>
 </RCC>

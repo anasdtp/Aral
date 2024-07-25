@@ -1,6 +1,6 @@
 #include "CommunicationPC.h"
 #include <functional>
-#include <IHM.h>
+#include <IHM_secondVersion.h>
 
 // Macros : 
 #define sendData(packet, length)  	(_serial->write(packet, length))    // Write Over Serial
@@ -35,6 +35,7 @@ void CommunicationPC::begin(HardwareSerial *srl, long baud, String nameBT){
 
     setNombreTours(1);
     _resetTestRequest = false; _StopTestRequest = false; _NbToursFaitRequest = false; _BilanRequest = false;
+    setFiltrage(false);
 }
 
 void CommunicationPC::end()
@@ -211,35 +212,40 @@ void CommunicationPC::RxManage(){
         case ID_NB_TOURS:{
             uint16_t nbTours = rxMsg[FIFO_lecture].data[1]<<8 | rxMsg[FIFO_lecture].data[0];
             setNombreTours(nbTours);
-            printMidOLED(("Nombre de Tours :\n" + String(nbTours)), 2, 1);
+            printMidOLED(("Nombre de Tours :\n" + String(nbTours)), 2);
 
             sendMsg(ID_ACK_NB_TOURS);
         }break;
 
         case ID_RELANCER_TEST:{
             _resetTestRequest = true;
-            printMidOLED(("Relancement du test"), 2, 1);
+            printMidOLED(("Relancement du test"), 2);
 
-            sendMsg(ID_ACK_GENERAL);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_RELANCER_TEST);
         }break;
 
         case ID_ARRET_TEST:{
             _StopTestRequest = true;
-            printMidOLED(("Arret du test"), 2, 1);
+            printMidOLED(("Arret du test"), 2);
 
-            sendMsg(ID_ACK_GENERAL);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_ARRET_TEST);
         }break;
 
         case ID_REQUEST_BILAN:{
             _BilanRequest = true;
-            printMidOLED(("Demande de bilan"), 2, 1);
-            sendMsg(ID_ACK_GENERAL);
+            printMidOLED(("Demande de bilan"), 2);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_REQUEST_BILAN);
         }break;
 
         case ID_REQUEST_NB_TOURS_FAIT:{
             _NbToursFaitRequest = true;
-            printMidOLED(("Demande du nombre de tours fait"), 2, 1);
-            sendMsg(ID_ACK_GENERAL);
+            printMidOLED(("Demande du nombre de tours fait"), 2);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_REQUEST_NB_TOURS_FAIT);
+        }break;
+
+        case ID_SET_FILTRAGE:{
+            setFiltrage(rxMsg[FIFO_lecture].data[0]);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_SET_FILTRAGE, (uint8_t)isFiltrageTrue());
         }break;
 
         default:
@@ -352,6 +358,15 @@ void CommunicationPC::sendMsg(uint8_t id, BilanTest &bilan){
     static uint8_t data[len];
 
     memcpy(data, bilan.voies, len);
+    sendMsg(id, len, data);
+}
+
+//Envoi du tableau temps de reponse du bilan
+void CommunicationPC::sendMsgTempsDeReponse(uint8_t id, BilanTest &bilan){
+    static const uint8_t len = 96;
+    static uint8_t data[len];
+
+    memcpy(data, bilan.tempsReponse, len);
     sendMsg(id, len, data);
 }
 
