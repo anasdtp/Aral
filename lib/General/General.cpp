@@ -396,10 +396,9 @@ bool General::TestComCarteARAL(BilanTest &bilan){
                                             //si non, on refait la DIFINITIVE_SCRUTATION avec _com->sendMsg(_com->ACK.id);
           if(_pc->isFiltrageTrue()){
             if(millis() - startTimeVoie > TIMEOUT_ACK){
-              //Alors la carte aral à un probléme sur cette voie car elle met au maximum 4 secondes pour prendre en compte l'alarme normalement
-              bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
-              bilan.tempsReponse[voieActuelle - 1] = millis() - startTimeVoie;
               //Serial.println(" LA VOIE N'EST PAS BONNE!!");
+              bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
+              bilan.tempsReponse[voieActuelle - 1] = 0;
               etat = SELECTION_DE_VOIE;
               etape = 1;
             }
@@ -408,17 +407,16 @@ bool General::TestComCarteARAL(BilanTest &bilan){
               //On repete la phase com pour recuperer le tableau des 96 voies
               // etat = PREMIERE_SCRUTATION;
               
-              _com->ACK.id = ID_PREMIERE_SCRUTATION;
-              _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
-              _com->sendMsg(_com->ACK.id);
-              etape = 2;
+              etape = 1;
               etat_suiv = etat_init[etape];
-              etat = ATT_ACK;
+              etat = etat_suiv;
+              etape++;
             }
           }
           else{
             //Serial.println(" LA VOIE N'EST PAS BONNE!!");
             bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
+            bilan.tempsReponse[voieActuelle - 1] = 0;
             etat = SELECTION_DE_VOIE;
             etape = 1;
           }
