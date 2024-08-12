@@ -43,9 +43,12 @@ def ensure_directory_exists(directory_path):
     else:
         print(f"Directory '{directory_path}' already exists.")
 
-# Exemple d'utilisation pour votre cas spécifique
-output_directory = DRIVELETTER + '/Users/' + USERNAME + '/AppData/Local/BancDeTestAral/outputPDF'
+
+output_directory = DRIVELETTER + '/Users/' + USERNAME + '/AppData/Local/BancDeTestAral'
 ensure_directory_exists(output_directory)
+
+output_pdf_directory = DRIVELETTER + '/Users/' + USERNAME + '/AppData/Local/BancDeTestAral/outputPDF'
+ensure_directory_exists(output_pdf_directory)
 
 def get_current_date_string():
     # Obtenir la date actuelle
@@ -55,7 +58,7 @@ def get_current_date_string():
     return date_string
 
 # Fonction pour générer un numéro de série
-def generer_numero_serie(prefixe, filePath = output_directory + '/compteurNumSerie.json'):
+def generer_numero_serie(prefixe, filePath = output_pdf_directory + '/compteurNumSerie.json'):
     try:
         with open(filePath, "r") as file:
             items = json.load(file)
@@ -173,7 +176,7 @@ class FicheValidation():
             #     writer.write(output_file)
             return writer
     
-    def writePDF(self, writer: PdfWriter, openPdf = True, output_path = output_directory+ '/output.pdf'):
+    def writePDF(self, writer: PdfWriter, openPdf = True, output_path = output_pdf_directory+ '/output.pdf'):
             # Écrire le nouveau PDF sur disque
         with open(output_path, "wb") as output_file:
             writer.write(output_file)

@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit, QDialog, QVBoxLayout, QTableWidgetItem, QPushButton, QTableWidget
+from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit, QDialog, QVBoxLayout, QTableWidgetItem, QPushButton, QTableWidget, QLabel, QComboBox, QTextEdit, QLineEdit, QHBoxLayout
 from PySide6.QtCore import QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QColor, QBrush, QIcon
 import serial
@@ -11,7 +11,8 @@ from ui_dialog import Ui_Dialog
 from ui_tableauVoies import Ui_tableauVoies
 import generatePDF
 from ui_ficheValidation import Ui_FicheValidation
-from ui_switch import Ui_Switch
+# from ui_switch import Ui_Switch
+from ui_historique import Ui_Historique
 #Pour actualiser : 
 #   pyside6-rcc -o Ressources_rc.py Ressources.qrc
 #   pyside6-uic mainwindow.ui -o ui_mainwindow.py
@@ -156,10 +157,13 @@ class MainWindow(QMainWindow):
         self.bilan_window = BilanWindow()
         self.state_window = StateWindow()
         self.fiche_validation = FicheValidation()
+
+        self.historique_des_tests = Historique()
         # self.switchARAL = SwitchAral()
         self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openBilanWindow)
         self.ui.actionTableau_Voies_en_Cours.triggered.connect(self.openStateWindow)
         self.ui.actionFicheValidation.triggered.connect(self.openFicheValidation)
+        self.ui.actionHistorique.triggered.connect(self.openHistoriqueDesTests)
 
         self.ui.actionQuit.triggered.connect(self.QuitWindows)
         self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
@@ -413,6 +417,11 @@ class MainWindow(QMainWindow):
         self.fiche_validation.raise_()
         self.fiche_validation.activateWindow()
         self.fiche_validation.init_controleurs_comboBox()
+    def openHistoriqueDesTests(self):
+        self.historique_des_tests.show()
+        self.historique_des_tests.raise_()
+        self.historique_des_tests.activateWindow()
+        self.historique_des_tests.init()
     
     # def openSwitchARAL(self):
     #     self.switchARAL.show()
@@ -449,6 +458,7 @@ class MainWindow(QMainWindow):
         self.state_window.close()
         self.bilan_window.close()
         self.fiche_validation.close()
+        self.historique_des_tests.close()
         # self.switchARAL.close()
         super().closeEvent(event)
 #end MainWindow
@@ -661,19 +671,175 @@ class FicheValidation(QDialog):
         fiche.writePDF(output) 
         self.accept()
 
-# class SwitchAral(QDialog):
-#     def __init__(self):
-#         super().__init__()
-#         self.ui = Ui_Switch()
-#         self.ui.setupUi(self)
-#         self.setWindowTitle("Switch ARAL")
-#         self.setWindowIcon(QIcon('switch.png'))
 
-#         self.ui.buttonBox.accepted.connect(self.switch_aral)
-#         self.ui.buttonBox.rejected.connect(self.reject)
+class DonneesHistorique():
+    def __init__(self):
+        self.dic_historique = {}
+        self.add_historique("0", "", "", "")
+
+    def add_historique(self, num_serie, date, en_panne, commentaires):
+        if num_serie in self.dic_historique:
+            self.dic_historique[num_serie].append({"date": date, "en_panne": en_panne, "commentaires": commentaires})
+        else:
+            self.dic_historique[num_serie] = [{"date": date, "en_panne": en_panne, "commentaires": commentaires}]
+
+    def get_ALL_data(self):
+        return self.dic_historique
     
-#     def switch_aral(self):
-#         pass
+    def get_data(self, num_serie):
+        return self.dic_historique.get(num_serie, [])
+    
+    def reset_all_data(self):
+        self.dic_historique = {}
+
+    def load_historique_from_json(self, filename):
+        try:
+            with open(filename, 'r') as file:
+                self.dic_historique = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            # self.dic_historique = {}
+            print("Error loading historique or json file not found")
+
+    def save_historique_to_json(self, filename):
+        with open(filename, 'w') as file:
+            json.dump(self.dic_historique, file, indent=4)
+
+historiqueData = DonneesHistorique()
+
+class Historique(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_Historique()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Historique des cartes ARAL")
+        self.setWindowIcon(QIcon('logo.ico'))
+
+        self.ui.buttonBox.accepted.connect(self.update)
+        self.ui.buttonBox.rejected.connect(self.reject)
+
+        self.ui.pushButton_nouvelle_panne.clicked.connect(self.AfficherSaisieHistorique)
+        self.ui.comboBox_num_serie.currentIndexChanged.connect(self.AfficherHistorique)
+
+        self.output_historique_directory = generatePDF.output_directory + '/Historique'
+        generatePDF.ensure_directory_exists(self.output_historique_directory)
+        self.output_JSON_num_serie = self.output_historique_directory + '/num_serie.json'
+        self.output_JSON_historique = self.output_historique_directory + '/historique.json'
+
+        self.populate_combo_box_num_serie()
+        historiqueData.load_historique_from_json(self.output_JSON_historique)
+
+        self.label_date = QLabel("Date :")
+        self.line_edit_date = QLineEdit()
+        self.label_en_panne = QLabel("En Panne?")
+        self.combo_box_panne = QComboBox()
+        self.combo_box_panne.addItems(["Oui", "Non", "Peut-être"])
+        self.label_commentaires = QLabel("Commentaires :")
+        self.text_edit_commentaires = QTextEdit()
+
+        
+
+        # self.layout().insertWidget(self.layout().count() - 1, self.label_date)
+        # self.layout().insertWidget(self.layout().count() - 1, self.line_edit_date)
+        layout_date = QHBoxLayout()
+        layout_date.addWidget(self.label_date)
+        layout_date.addWidget(self.line_edit_date)
+        self.layout().insertLayout(self.layout().count() - 1, layout_date)
+
+        # self.layout().insertWidget(self.layout().count() - 1, self.label_en_panne)
+        # self.layout().insertWidget(self.layout().count() - 1, self.combo_box_panne)
+        layout_panne = QHBoxLayout()
+        layout_panne.addWidget(self.label_en_panne)
+        layout_panne.addWidget(self.combo_box_panne)
+        self.layout().insertLayout(self.layout().count() - 1, layout_panne)
+
+        self.layout().insertWidget(self.layout().count() - 1, self.label_commentaires)
+        self.layout().insertWidget(self.layout().count() - 1, self.text_edit_commentaires)
+
+        self.label_date.hide()
+        self.line_edit_date.hide()
+        self.label_en_panne.hide()
+        self.combo_box_panne.hide()
+        self.label_commentaires.hide()
+        self.text_edit_commentaires.hide()
+
+    def populate_combo_box_num_serie(self):
+        try:
+            with open(self.output_JSON_num_serie, "r") as file:
+                num_series = json.load(file)
+                self.ui.comboBox_num_serie.addItems(num_series)
+                print("Loading num_serie", num_series)
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("num_serie.json error or not found")
+            # pass  # No items to load or file is empty
+
+    def init(self):
+        self.ui.comboBox_num_serie.clear()
+        self.populate_combo_box_num_serie()
+
+        self.ui.label_historique.show()
+        self.ui.textEdit_historique.show()
+        self.ui.textEdit_historique.clear()
+        historiqueData.load_historique_from_json(self.output_JSON_historique)
+        self.AfficherHistorique()
+
+        self.ui.pushButton_nouvelle_panne.show()
+
+        self.label_date.hide()
+        self.line_edit_date.hide()
+        self.line_edit_date.setText("")
+        self.label_en_panne.hide()
+        self.combo_box_panne.hide()
+        self.label_commentaires.hide()
+        self.text_edit_commentaires.hide()
+
+    def AfficherHistorique(self):
+        self.ui.textEdit_historique.clear()
+        historiqueSpecifique = historiqueData.get_data(self.ui.comboBox_num_serie.currentText())
+        # historiqueSpecifique = historique_list[0]  # Accède au premier élément de la liste
+        print(historiqueSpecifique)
+        for historique in historiqueSpecifique:
+            # text = (
+            #     historique["date"] + 
+            #     ":\nEn panne ? " + 
+            #     historique["en_panne"] + 
+            #     ".\nCommentaires :\n" + 
+            #     historique["commentaires"] + " \n"
+            # )
+            self.ui.textEdit_historique.append('\n' + historique["date"] + '--------------------------- ')
+            
+            self.ui.textEdit_historique.append("En panne? ")
+            self.ui.textEdit_historique.append(historique["en_panne"])
+
+            self.ui.textEdit_historique.append("\nCommentaires : ")
+            self.ui.textEdit_historique.append(historique["commentaires"] + '\n')
+    
+    def AfficherSaisieHistorique(self):
+        self.ui.label_historique.hide()
+        self.ui.textEdit_historique.hide()
+        self.ui.pushButton_nouvelle_panne.hide()
+        self.label_date.show()
+        self.line_edit_date.show()
+        self.label_en_panne.show()
+        self.combo_box_panne.show()
+        self.label_commentaires.show()
+        self.label_commentaires.clear()
+        self.text_edit_commentaires.show()
+        self.text_edit_commentaires.clear()
+
+        self.line_edit_date.setText(generatePDF.get_current_date_string())
+        
+    
+    def update(self):#Actualisation des JSON 
+        generatePDF.add_items_to_json(self.output_JSON_num_serie, self.ui.comboBox_num_serie.currentText())
+        if(self.line_edit_date.text() is not ""):
+            historiqueData.add_historique(self.ui.comboBox_num_serie.currentText(), 
+                                          self.line_edit_date.text(), 
+                                          self.combo_box_panne.currentText(), 
+                                          self.text_edit_commentaires.toPlainText())
+        historiqueData.save_historique_to_json(self.output_JSON_historique)
+        print(historiqueData.get_ALL_data())
+
+
 
 def main():
     app = QApplication([]) 
@@ -687,3 +853,19 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+# class SwitchAral(QDialog):
+#     def __init__(self):
+#         super().__init__()
+#         self.ui = Ui_Switch()
+#         self.ui.setupUi(self)
+#         self.setWindowTitle("Switch ARAL")
+#         self.setWindowIcon(QIcon('switch.png'))
+
+#         self.ui.buttonBox.accepted.connect(self.switch_aral)
+#         self.ui.buttonBox.rejected.connect(self.reject)
+    
+#     def switch_aral(self):
+#         pass

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1215</width>
-    <height>720</height>
+    <height>751</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -333,43 +333,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>1215</width>
-     <height>26</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuFichiers">
-    <property name="title">
-     <string>Fichiers</string>
-    </property>
-    <addaction name="actionTableau_Voies_en_Cours"/>
-    <addaction name="actionTableau_Voies_Bilan"/>
-    <addaction name="separator"/>
-    <addaction name="action_reglage_du_switch_SW2"/>
-    <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-   </widget>
-   <widget class="QMenu" name="menuCreation_PDF">
-    <property name="title">
-     <string>Creation PDF</string>
-    </property>
-    <addaction name="actionFicheValidation"/>
-   </widget>
-   <widget class="QMenu" name="menuPort_COM">
-    <property name="title">
-     <string>Port COM</string>
-    </property>
-    <addaction name="actionConnect"/>
-    <addaction name="actionDisconnect"/>
-   </widget>
-   <addaction name="menuFichiers"/>
-   <addaction name="menuPort_COM"/>
-   <addaction name="menuCreation_PDF"/>
-  </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QToolBar" name="mainToolBar">
    <property name="minimumSize">
@@ -397,6 +360,43 @@
    <addaction name="actionTableau_Voies_en_Cours"/>
    <addaction name="separator"/>
    <addaction name="actionFicheValidation"/>
+   <addaction name="separator"/>
+   <addaction name="actionHistorique"/>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1215</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFichiers">
+    <property name="title">
+     <string>Fichiers</string>
+    </property>
+    <addaction name="actionTableau_Voies_en_Cours"/>
+    <addaction name="actionTableau_Voies_Bilan"/>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuCreation_PDF">
+    <property name="title">
+     <string>Creation PDF</string>
+    </property>
+    <addaction name="actionFicheValidation"/>
+   </widget>
+   <widget class="QMenu" name="menuPort_COM">
+    <property name="title">
+     <string>Port COM</string>
+    </property>
+    <addaction name="actionConnect"/>
+    <addaction name="actionDisconnect"/>
+   </widget>
+   <addaction name="menuFichiers"/>
+   <addaction name="menuPort_COM"/>
+   <addaction name="menuCreation_PDF"/>
   </widget>
   <action name="actionTableau_Voies_Bilan">
    <property name="text">
@@ -477,6 +477,14 @@
    </property>
    <property name="toolTip">
     <string>switch_SW2</string>
+   </property>
+  </action>
+  <action name="actionHistorique">
+   <property name="text">
+    <string>Historique de test</string>
+   </property>
+   <property name="toolTip">
+    <string>Historique de test</string>
    </property>
   </action>
  </widget>
