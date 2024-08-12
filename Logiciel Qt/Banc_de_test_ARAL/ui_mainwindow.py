@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1215, 603)
+        MainWindow.resize(1215, 720)
         self.actionTableau_Voies_Bilan = QAction(MainWindow)
         self.actionTableau_Voies_Bilan.setObjectName(u"actionTableau_Voies_Bilan")
         self.actionTableau_Voies_en_Cours = QAction(MainWindow)
@@ -89,6 +89,11 @@ class Ui_MainWindow(object):
         self.verticalSpacer_2 = QSpacerItem(20, 5, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
         self.verticalLayout.addItem(self.verticalSpacer_2)
+
+        self.textEdit_panel_ACK = QTextEdit(self.centralwidget)
+        self.textEdit_panel_ACK.setObjectName(u"textEdit_panel_ACK")
+
+        self.verticalLayout.addWidget(self.textEdit_panel_ACK)
 
         self.horizontalLayout_4 = QHBoxLayout()
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
@@ -161,33 +166,48 @@ class Ui_MainWindow(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.sendButton_activer_filtrage = QPushButton(self.centralwidget)
-        self.sendButton_activer_filtrage.setObjectName(u"sendButton_activer_filtrage")
-        self.sendButton_activer_filtrage.setMinimumSize(QSize(0, 30))
+        self.sendButton_lancementTestNuit = QPushButton(self.centralwidget)
+        self.sendButton_lancementTestNuit.setObjectName(u"sendButton_lancementTestNuit")
+        self.sendButton_lancementTestNuit.setMinimumSize(QSize(0, 40))
         font = QFont()
         font.setBold(True)
         font.setUnderline(False)
         font.setStrikeOut(False)
-        font.setKerning(True)
-        self.sendButton_activer_filtrage.setFont(font)
-        self.sendButton_activer_filtrage.setCursor(QCursor(Qt.CrossCursor))
-        self.sendButton_activer_filtrage.setMouseTracking(False)
-
-        self.verticalLayout.addWidget(self.sendButton_activer_filtrage)
-
-        self.sendButton_lancementTestNuit = QPushButton(self.centralwidget)
-        self.sendButton_lancementTestNuit.setObjectName(u"sendButton_lancementTestNuit")
-        self.sendButton_lancementTestNuit.setMinimumSize(QSize(0, 40))
-        font1 = QFont()
-        font1.setBold(True)
-        font1.setUnderline(False)
-        font1.setStrikeOut(False)
-        self.sendButton_lancementTestNuit.setFont(font1)
+        self.sendButton_lancementTestNuit.setFont(font)
         self.sendButton_lancementTestNuit.setCursor(QCursor(Qt.PointingHandCursor))
         self.sendButton_lancementTestNuit.setFocusPolicy(Qt.StrongFocus)
         self.sendButton_lancementTestNuit.setCheckable(False)
 
         self.verticalLayout.addWidget(self.sendButton_lancementTestNuit)
+
+        self.verticalSpacer_3 = QSpacerItem(20, 5, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+
+        self.verticalLayout.addItem(self.verticalSpacer_3)
+
+        self.sendButton_activer_filtrage = QPushButton(self.centralwidget)
+        self.sendButton_activer_filtrage.setObjectName(u"sendButton_activer_filtrage")
+        self.sendButton_activer_filtrage.setMinimumSize(QSize(0, 30))
+        font1 = QFont()
+        font1.setBold(True)
+        font1.setUnderline(False)
+        font1.setStrikeOut(False)
+        font1.setKerning(True)
+        self.sendButton_activer_filtrage.setFont(font1)
+        self.sendButton_activer_filtrage.setCursor(QCursor(Qt.CrossCursor))
+        self.sendButton_activer_filtrage.setMouseTracking(False)
+        self.sendButton_activer_filtrage.setStyleSheet(u"")
+
+        self.verticalLayout.addWidget(self.sendButton_activer_filtrage)
+
+        self.sendButton_reglage_nb_etat_en_test = QPushButton(self.centralwidget)
+        self.sendButton_reglage_nb_etat_en_test.setObjectName(u"sendButton_reglage_nb_etat_en_test")
+        self.sendButton_reglage_nb_etat_en_test.setMinimumSize(QSize(0, 30))
+        self.sendButton_reglage_nb_etat_en_test.setFont(font1)
+        self.sendButton_reglage_nb_etat_en_test.setCursor(QCursor(Qt.CrossCursor))
+        self.sendButton_reglage_nb_etat_en_test.setMouseTracking(False)
+        self.sendButton_reglage_nb_etat_en_test.setStyleSheet(u"")
+
+        self.verticalLayout.addWidget(self.sendButton_reglage_nb_etat_en_test)
 
         self.verticalSpacer = QSpacerItem(10, 5, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
@@ -196,7 +216,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1215, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1215, 26))
         self.menuFichiers = QMenu(self.menubar)
         self.menuFichiers.setObjectName(u"menuFichiers")
         self.menuCreation_PDF = QMenu(self.menubar)
@@ -230,8 +250,6 @@ class Ui_MainWindow(object):
         self.mainToolBar.addAction(self.actionClearLog)
         self.mainToolBar.addSeparator()
         self.mainToolBar.addAction(self.actionReset)
-        self.mainToolBar.addSeparator()
-        self.mainToolBar.addAction(self.action_reglage_du_switch_SW2)
         self.mainToolBar.addSeparator()
         self.mainToolBar.addAction(self.actionTableau_Voies_en_Cours)
         self.mainToolBar.addSeparator()
@@ -279,8 +297,9 @@ class Ui_MainWindow(object):
         self.comboBox_nbTours.setItemText(13, QCoreApplication.translate("MainWindow", u"500", None))
 
         self.sendButton_nbTours.setText(QCoreApplication.translate("MainWindow", u"Send", None))
-        self.sendButton_activer_filtrage.setText(QCoreApplication.translate("MainWindow", u"Activer Filtrage", None))
         self.sendButton_lancementTestNuit.setText(QCoreApplication.translate("MainWindow", u"LANCER UN TEST DE 8H", None))
+        self.sendButton_activer_filtrage.setText(QCoreApplication.translate("MainWindow", u"Activer Filtrage", None))
+        self.sendButton_reglage_nb_etat_en_test.setText(QCoreApplication.translate("MainWindow", u"Mettre le mode avec 2 \u00e9tats, Court-circuit et Alarme", None))
         self.menuFichiers.setTitle(QCoreApplication.translate("MainWindow", u"Fichiers", None))
         self.menuCreation_PDF.setTitle(QCoreApplication.translate("MainWindow", u"Creation PDF", None))
         self.menuPort_COM.setTitle(QCoreApplication.translate("MainWindow", u"Port COM", None))

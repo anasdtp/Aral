@@ -81,7 +81,7 @@ def generer_numero_serie(prefixe, filePath = output_directory + '/compteurNumSer
     
     return numero_serie
 
-def createPDFText(text, x, y, interligne = 40):
+def createPDFText(text, x, y, interligne = 30):
         # writer = PdfWriter()
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)

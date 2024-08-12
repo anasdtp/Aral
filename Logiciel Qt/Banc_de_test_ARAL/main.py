@@ -145,7 +145,10 @@ class MainWindow(QMainWindow):
         self.ui.sendButton_nbTours.clicked.connect(self.sendNbTours)
         self.ui.sendButton_repriseTest.clicked.connect(self.sendRelancerTest)
         self.ui.sendButton_arret.clicked.connect(self.sendArretTest)
+        self.ui.sendButton_lancementTestNuit.clicked.connect(self.sendNbTours8Heures)
+
         self.ui.sendButton_activer_filtrage.clicked.connect(self.sendFiltrage)
+        self.ui.sendButton_reglage_nb_etat_en_test.clicked.connect(self.sendModeTension)
 
         self.dialog = Dialog()
         self.dialog.ui.buttonBox.accepted.connect(self.start_serial)
@@ -153,11 +156,10 @@ class MainWindow(QMainWindow):
         self.bilan_window = BilanWindow()
         self.state_window = StateWindow()
         self.fiche_validation = FicheValidation()
-        self.switchARAL = SwitchAral()
+        # self.switchARAL = SwitchAral()
         self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openBilanWindow)
         self.ui.actionTableau_Voies_en_Cours.triggered.connect(self.openStateWindow)
         self.ui.actionFicheValidation.triggered.connect(self.openFicheValidation)
-        self.ui.action_reglage_du_switch_SW2.triggered.connect(self.openSwitchARAL)
 
         self.ui.actionQuit.triggered.connect(self.QuitWindows)
         self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
@@ -165,7 +167,6 @@ class MainWindow(QMainWindow):
         self.ui.actionDisconnect.triggered.connect(self.closeSerial)
         self.ui.actionReset.triggered.connect(self.resetStruct)
 
-        self.ui.sendButton_lancementTestNuit.clicked.connect(self.send128Tours)
         print("Initialized MainWindow")
 
         # Configuration du QTimer
@@ -213,8 +214,11 @@ class MainWindow(QMainWindow):
                 self.ui.textEdit_panel.append(f"Received message from ID_NB_TOURS??? Bizarre")
                 pass
             case 0xA1:#ID_ACK_NB_TOURS
+                message = f"ID_ACK_NB_TOURS : Banc de test à bien reçu le nombre de tours à faire"
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_ACK_NB_TOURS : Banc de test à bien reçu le nombre de tours à faire")
+                self.ui.textEdit_panel_ACK.append(f"")
+                self.ui.textEdit_panel.append(message)
+                self.ui.textEdit_panel_ACK.append(message)
             case 0xB0:#ID_INITIALISATION_ARAL_EN_COURS
                 nbEssai = com.rxMsg[self.FIFO_lecture].data[0]
                 self.ui.textEdit_panel.append(f"")
@@ -245,15 +249,21 @@ class MainWindow(QMainWindow):
                     voies.bilan[numVoie-1] = etatVoie
                     self.bilan_window.update_states()
                     if(etatVoies == etatBilan["DEFAUT"]):
+                        message = f"ID_ETAT_UNE_VOIE : Voie n°"+ str(numVoie) +" en DEFAUT"
                         self.ui.textEdit_panel.append(f"")
-                        self.ui.textEdit_panel.append(f"ID_ETAT_UNE_VOIE : Voie n°"+ str(numVoie) +" en DEFAUT")
+                        self.ui.textEdit_panel_ACK.append(f"")
+                        self.ui.textEdit_panel.append(message)
+                        self.ui.textEdit_panel_ACK.append(message)
             case 0xB6:#ID_CARTE_ARAL_NE_REPOND_PLUS
                 voies.perteDeCom += 1
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_CARTE_ARAL_NE_REPOND_PLUS : carte ARAL ne répond plus !! Defaut COM!")
+                self.ui.textEdit_panel.append(f"ID_CARTE_ARAL_NE_REPOND_PLUS : carte ARAL ne répond plus !! Defaut COM! " + str(voies.perteDeCom))
             case 0xB7:#ID_CARTE_ARAL_REPEAT_REQUEST
+                message = f"ID_CARTE_ARAL_REPEAT_REQUEST : la carte aral demande de repeter le message"
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_CARTE_ARAL_REPEAT_REQUEST : la carte aral demande de repeter le message")
+                self.ui.textEdit_panel_ACK.append(f"")
+                self.ui.textEdit_panel.append(message)
+                self.ui.textEdit_panel_ACK.append(message)
             case 0xB8:#ID_TEST_TEMPS_DE_REPONSE_FILTRAGE
                 # voies.tempsDeReponse = com.rxMsg[self.FIFO_lecture].data / 10.0 #reçu en diziéme de secondes, convertit lors du stockage ici en secondes
                 for i in range(96):
@@ -268,16 +278,27 @@ class MainWindow(QMainWindow):
                     self.ui.textEdit_panel.append(f"")
                     self.ui.textEdit_panel.append(f"ID_TEST_TEMPS_DE_REPONSE_FILTRAGE_UNE_VOIE : temps de reponse de la voie n°"+ str(numVoie) +" : " + str(tempsDeReponse) +" secondes")
             case 0xC0:#ID_ACK_GENERAL
+                message = f"ID_ACK_GENERAL : reponse gen"#, " + idComEnText[com.rxMsg[self.FIFO_lecture].data[0]] + " : " + str(com.rxMsg[self.FIFO_lecture].data[0])
+                if(com.rxMsg[self.FIFO_lecture].len > 0):
+                    message += ", " + idComEnText[com.rxMsg[self.FIFO_lecture].data[0]] + " : "
+                    for i in range(1, com.rxMsg[self.FIFO_lecture].len):
+                        message += str(com.rxMsg[self.FIFO_lecture].data[i]) + ", "
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_ACK_GENERAL : reponse gen, " + idComEnText[com.rxMsg[self.FIFO_lecture].data[0]])
+                self.ui.textEdit_panel_ACK.append(f"")
+                self.ui.textEdit_panel.append(message)
+                self.ui.textEdit_panel_ACK.append(message)
+
             case 0xD0:#ID_REPEAT_REQUEST
+                message = f"ID_REPEAT_REQUEST : le banc de test n'a pas compris, message incohérent"
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_REPEAT_REQUEST : le banc de test n'a pas compris, message incohérent")
+                self.ui.textEdit_panel_ACK.append(f"")
+                self.ui.textEdit_panel.append(message)
+                self.ui.textEdit_panel_ACK.append(message)
             case 0xD2:#ID_ACK_REQUEST_NB_TOURS_FAIT
-                nbToursFait = com.rxMsg[self.FIFO_lecture].data[0] + com.rxMsg[self.FIFO_lecture].data[1]<<8
+                nbToursFait = com.rxMsg[self.FIFO_lecture].data[0] #+ com.rxMsg[self.FIFO_lecture].data[1]<<8
                 voies.nombreDeTourFait = nbToursFait
                 self.ui.textEdit_panel.append(f"")
-                self.ui.textEdit_panel.append(f"ID_ACK_REQUEST_NB_TOURS_FAIT : Nombre de tours fait : " + str(nbToursFait))
+                self.ui.textEdit_panel.append(f"ID_ACK_REQUEST_NB_TOURS_FAIT : Nombre de tours fait : " + str(voies.nombreDeTourFait))
             case _:
                 self.ui.textEdit_panel.append(f"Received message from an unknown ID")
         self.FIFO_lecture = (self.FIFO_lecture + 1) % SIZE_FIFO
@@ -345,20 +366,37 @@ class MainWindow(QMainWindow):
             activer = 0
             self.ui.sendButton_activer_filtrage.setText("Activer Filtrage")
         self.sendByte(ID_SET_FILTRAGE, activer)
+
+    def sendModeTension(self):
+        print("sendModeTension called")
+        mode = 1
+        if(self.ui.sendButton_reglage_nb_etat_en_test.text() == "Mettre le mode avec 2 états, Court-circuit et Alarme"):
+            mode = 1
+            self.ui.sendButton_reglage_nb_etat_en_test.setText("Mettre le mode 4 états")
+        else:
+            mode = 2
+            self.ui.sendButton_reglage_nb_etat_en_test.setText("Mettre le mode avec 2 états, Court-circuit et Alarme")
+        self.sendByte(ID_SET_MODE_TENSION, mode)
     
-    def send128Tours(self):
-        print("send128Tours called")
-        self.sendRelancerTest()
+    def sendNbTours8Heures(self):#1 tours avec 4 états = 3 min30, avec 2 etats = 1min45. Soit pour atteindre 8 Heures...
         nbTours = 128
+        print("sendNbTours8Heures called")
+        if(self.ui.sendButton_reglage_nb_etat_en_test.text() == "Mettre le mode avec 2 états, Court-circuit et Alarme"):
+            nbTours = 128
+        else:
+            nbTours = 267
+        self.sendRelancerTest()
         self.sendTwoBytes(ID_NB_TOURS, nbTours)
 
     def openBilanWindow(self):
         self.sendEmpty(ID_REQUEST_BILAN)
+        self.sendEmpty(ID_REQUEST_NB_TOURS_FAIT)
         self.bilan_window.show()
         self.bilan_window.raise_()
         self.bilan_window.activateWindow()
         self.bilan_window.update_states()
     def openStateWindow(self):
+        self.sendEmpty(ID_REQUEST_NB_TOURS_FAIT)
         self.state_window.show()
         self.state_window.raise_()
         self.state_window.activateWindow()
@@ -367,19 +405,23 @@ class MainWindow(QMainWindow):
         self.dialog.show()
         self.dialog.raise_()
         self.dialog.activateWindow()
+        self.dialog.populate_com_ports() #Permet d'aller chercher et actualiser les ports COM de disponible. Ce qui permet de ne pas evoir fermer le logiciel et le reouvrir
     def openFicheValidation(self):
+        self.sendEmpty(ID_REQUEST_BILAN)
+        self.sendEmpty(ID_REQUEST_NB_TOURS_FAIT)
         self.fiche_validation.show()
         self.fiche_validation.raise_()
         self.fiche_validation.activateWindow()
         self.fiche_validation.init_controleurs_comboBox()
     
-    def openSwitchARAL(self):
-        self.switchARAL.show()
-        self.switchARAL.raise_()
-        self.switchARAL.activateWindow()
+    # def openSwitchARAL(self):
+    #     self.switchARAL.show()
+    #     self.switchARAL.raise_()
+    #     self.switchARAL.activateWindow()
     
     def textPanel_Clear(self):
         self.ui.textEdit_panel.clear()
+        self.ui.textEdit_panel_ACK.clear()
     
     def closeSerial(self):
         self.ui.textEdit_panel.append(f"")
@@ -392,6 +434,7 @@ class MainWindow(QMainWindow):
         voies.voies = [etatVoies["NONE"] for _ in range(NOMBRE_VOIES)]
         voies.bilan = [etatBilan["test non fait"] for _ in range(NOMBRE_VOIES)]
         voies.perteDeCom = 0
+        voies.nombreDeTourFait = 0
 
         self.bilan_window.update_states()
         self.state_window.update_states()
@@ -406,7 +449,7 @@ class MainWindow(QMainWindow):
         self.state_window.close()
         self.bilan_window.close()
         self.fiche_validation.close()
-        self.switchARAL.close()
+        # self.switchARAL.close()
         super().closeEvent(event)
 #end MainWindow
 
@@ -417,8 +460,9 @@ class Dialog(QDialog):
         self.ui.setupUi(self)
         self.setWindowTitle("CHOIX PORT COM")
         self.setWindowIcon(QIcon('logo.ico'))
-        # self.ui.buttonBox.accepted.connect(self.start_serial) #Fait dans la mainwindow
-        self.ui.buttonBox.rejected.connect(self.reject)
+        # self.ui.buttonBox.accepted.connect(self.start_serial) #Cas si jamais on n'appuie sur OK. Fait dans la mainwindow pour afficher à l'utilisateur ce qu'on a fait
+        self.ui.buttonBox.rejected.connect(self.reject) #Cas si jamais on n'appuie sur annuler
+
         self.populate_com_ports()
 
     def populate_com_ports(self):
@@ -455,20 +499,26 @@ class BilanWindow(QDialog):
             for j in range(10):
                 index = i * 10 + j
                 # print("j : " + str(j) + " i : " + str(i) + " index : " + str(index))
-                if(index>=96):
-                    return
-                item = QTableWidgetItem()
-                if voies.bilan[index] == etatBilan["OK"]:
-                    item.setBackground(QColor("darkGreen"))
-                    item.setText('OK')
-                elif voies.bilan[index] == etatBilan["DEFAUT"]:
-                    item.setBackground(QColor("red"))
-                    item.setText('DEFAUT')
-                else:
-                    item.setBackground(QColor("gray"))
-                    item.setText('Non-testée')
+                if(index<96):
+                    
+                    item = QTableWidgetItem()
+                    if voies.bilan[index] == etatBilan["OK"]:
+                        item.setBackground(QColor("darkGreen"))
+                        item.setText('OK')
+                    elif voies.bilan[index] == etatBilan["DEFAUT"]:
+                        item.setBackground(QColor("red"))
+                        item.setText('DEFAUT')
+                    else:
+                        item.setBackground(QColor("gray"))
+                        item.setText('Non-testée')
 
-                self.ui.tableWidget.setItem(i, j, item)
+                    self.ui.tableWidget.setItem(i, j, item)
+                else:
+                    item = QTableWidgetItem()
+                    item.setText('Tour n°' + str(voies.nombreDeTourFait))
+                    self.ui.tableWidget.setItem(i, j, item)
+                    return
+
 
 class StateWindow(QDialog):
     def __init__(self):
@@ -485,31 +535,36 @@ class StateWindow(QDialog):
             for j in range(10):
                 index = i * 10 + j
                 # print("j : " + str(j) + " i : " + str(i) + " index : " + str(index))
-                if(index>=96):
-                    return
-                item = QTableWidgetItem()
-                
-                if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
-                    text = 'Court-Circuit, ' + str(voies.tempsDeReponse[index]) + ' s'
-                    color = QColor("darkCyan")
-                elif voies.voies[index] == etatVoies["ALARME"]:
-                    text = 'Alarme, ' + str(voies.tempsDeReponse[index]) + ' s'
-                    color = QColor("darkMagenta")
-                elif voies.voies[index] == etatVoies["NORMAL"]:
-                    text = 'Normal, ' + str(voies.tempsDeReponse[index]) + ' s'
-                    color = QColor("green")
-                elif voies.voies[index] == etatVoies["CONGRUENCE"]:
-                    text = 'Congruence, ' + str(voies.tempsDeReponse[index]) + ' s'
-                    color = QColor("gray")
+                if(index<96):
+                    item = QTableWidgetItem()
+                    
+                    if voies.voies[index] == etatVoies["COURT_CIRCUIT"]:
+                        text = 'Court-Circuit, ' + str(voies.tempsDeReponse[index]) + ' s'
+                        color = QColor("darkCyan")
+                    elif voies.voies[index] == etatVoies["ALARME"]:
+                        text = 'Alarme, ' + str(voies.tempsDeReponse[index]) + ' s'
+                        color = QColor("darkMagenta")
+                    elif voies.voies[index] == etatVoies["NORMAL"]:
+                        text = 'Normal, ' + str(voies.tempsDeReponse[index]) + ' s'
+                        color = QColor("green")
+                    elif voies.voies[index] == etatVoies["CONGRUENCE"]:
+                        text = 'Congruence, ' + str(voies.tempsDeReponse[index]) + ' s'
+                        color = QColor("gray")
+                    else:
+                        text = ''
+                        color = QColor("gray")
+                    
+                    item.setText(text)
+                    item.setBackground(color)
+
+                    self.ui.tableWidget.setItem(i, j, item)
                 else:
-                    text = ''
-                    color = QColor("gray")
-                
-                item.setText(text)
-                item.setBackground(color)
+                    item = QTableWidgetItem()
+                    item.setText('Tour n°' + str(voies.nombreDeTourFait))
+                    self.ui.tableWidget.setItem(i, j, item)
+                    return
 
-
-                self.ui.tableWidget.setItem(i, j, item)
+        
 
 class donneesFiche():
     def __init__(self):
@@ -582,9 +637,9 @@ class FicheValidation(QDialog):
                 for debut, fin, etat in groupes:
                     etat_str = [key for key, value in etatBilan.items() if value == etat][0]
                     if debut == fin:
-                        problemes.append(f"Voie {debut + 1}: {etat_str}")
+                        problemes.append(f"Voie {debut + 1} : {etat_str}")
                     else:
-                        problemes.append(f"Voies {debut + 1} à {fin + 1}: {etat_str}")
+                        problemes.append(f"Voies {debut + 1} à {fin + 1} : {etat_str}")
                 commentaires = generatePDF.CommentaireCarteMinimal + "Des problèmes ont été détectés dans le bilan des tests:\n" + "\n".join(problemes)
             if(voies.perteDeCom>0):
                 commentaires += "Perte(s) de communication durant le test ("+ str(voies.perteDeCom)+" fois)\n"
@@ -606,19 +661,19 @@ class FicheValidation(QDialog):
         fiche.writePDF(output) 
         self.accept()
 
-class SwitchAral(QDialog):
-    def __init__(self):
-        super().__init__()
-        self.ui = Ui_Switch()
-        self.ui.setupUi(self)
-        self.setWindowTitle("Switch ARAL")
-        self.setWindowIcon(QIcon('switch.png'))
+# class SwitchAral(QDialog):
+#     def __init__(self):
+#         super().__init__()
+#         self.ui = Ui_Switch()
+#         self.ui.setupUi(self)
+#         self.setWindowTitle("Switch ARAL")
+#         self.setWindowIcon(QIcon('switch.png'))
 
-        self.ui.buttonBox.accepted.connect(self.switch_aral)
-        self.ui.buttonBox.rejected.connect(self.reject)
+#         self.ui.buttonBox.accepted.connect(self.switch_aral)
+#         self.ui.buttonBox.rejected.connect(self.reject)
     
-    def switch_aral(self):
-        pass
+#     def switch_aral(self):
+#         pass
 
 def main():
     app = QApplication([]) 

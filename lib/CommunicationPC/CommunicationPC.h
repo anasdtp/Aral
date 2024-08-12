@@ -27,6 +27,7 @@
 #define ID_ACK_REQUEST_NB_TOURS_FAIT 0xD2
 #define ID_REQUEST_BILAN 0xD3 //Reponse avec l'id ID_TEST_TERMINEE si terminée sinon ID_TEST_EN_COURS si test en cours
 #define ID_SET_FILTRAGE 0xD4 //Filtrage des alarmes en fonction des switch SW2. Filtrage = etat stable pendant un temps desiré (etat stable = ne prends pas en compte les changements)
+#define ID_SET_MODE_TENSION 0xD5 //Choix du mode de tension, soit 4 tensions soit 2. De base est à 4.
 
 class CommunicationPC
 {
@@ -92,6 +93,9 @@ public:
       return _filtrage;
     }
 
+    void setModeTension(MODE_TENSION mode){_mode = mode;}
+    MODE_TENSION getModeTension(){return _mode;}
+
 private:
     HardwareSerial *_serial;
     BluetoothSerial *_serialBT;
@@ -100,6 +104,8 @@ private:
     int NBTOURS; 
     bool _resetTestRequest, _StopTestRequest, _NbToursFaitRequest, _BilanRequest;
     bool _filtrage;//Flag pour savoir si le filtrage est activé ou non
+
+    MODE_TENSION _mode = MODE_4_ALARMES;
 
     // État de la réception
     enum StateRx{

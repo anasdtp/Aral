@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1215</width>
-    <height>603</height>
+    <height>720</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -62,6 +62,9 @@
        </size>
       </property>
      </spacer>
+    </item>
+    <item>
+     <widget class="QTextEdit" name="textEdit_panel_ACK"/>
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_4">
@@ -208,33 +211,6 @@
      </layout>
     </item>
     <item>
-     <widget class="QPushButton" name="sendButton_activer_filtrage">
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>30</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <bold>true</bold>
-        <underline>false</underline>
-        <strikeout>false</strikeout>
-        <kerning>true</kerning>
-       </font>
-      </property>
-      <property name="cursor">
-       <cursorShape>CrossCursor</cursorShape>
-      </property>
-      <property name="mouseTracking">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Activer Filtrage</string>
-      </property>
-     </widget>
-    </item>
-    <item>
      <widget class="QPushButton" name="sendButton_lancementTestNuit">
       <property name="minimumSize">
        <size>
@@ -264,6 +240,82 @@
      </widget>
     </item>
     <item>
+     <spacer name="verticalSpacer_3">
+      <property name="orientation">
+       <enum>Qt::Vertical</enum>
+      </property>
+      <property name="sizeType">
+       <enum>QSizePolicy::Minimum</enum>
+      </property>
+      <property name="sizeHint" stdset="0">
+       <size>
+        <width>20</width>
+        <height>5</height>
+       </size>
+      </property>
+     </spacer>
+    </item>
+    <item>
+     <widget class="QPushButton" name="sendButton_activer_filtrage">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <bold>true</bold>
+        <underline>false</underline>
+        <strikeout>false</strikeout>
+        <kerning>true</kerning>
+       </font>
+      </property>
+      <property name="cursor">
+       <cursorShape>CrossCursor</cursorShape>
+      </property>
+      <property name="mouseTracking">
+       <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="text">
+       <string>Activer Filtrage</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="sendButton_reglage_nb_etat_en_test">
+      <property name="minimumSize">
+       <size>
+        <width>0</width>
+        <height>30</height>
+       </size>
+      </property>
+      <property name="font">
+       <font>
+        <bold>true</bold>
+        <underline>false</underline>
+        <strikeout>false</strikeout>
+        <kerning>true</kerning>
+       </font>
+      </property>
+      <property name="cursor">
+       <cursorShape>CrossCursor</cursorShape>
+      </property>
+      <property name="mouseTracking">
+       <bool>false</bool>
+      </property>
+      <property name="styleSheet">
+       <string notr="true"/>
+      </property>
+      <property name="text">
+       <string>Mettre le mode avec 2 états, Court-circuit et Alarme</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <spacer name="verticalSpacer">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -287,7 +339,7 @@
      <x>0</x>
      <y>0</y>
      <width>1215</width>
-     <height>22</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFichiers">
@@ -341,8 +393,6 @@
    <addaction name="actionClearLog"/>
    <addaction name="separator"/>
    <addaction name="actionReset"/>
-   <addaction name="separator"/>
-   <addaction name="action_reglage_du_switch_SW2"/>
    <addaction name="separator"/>
    <addaction name="actionTableau_Voies_en_Cours"/>
    <addaction name="separator"/>
@@ -419,7 +469,7 @@
   </action>
   <action name="action_reglage_du_switch_SW2">
    <property name="icon">
-    <iconset resource="Ressources.qrc">
+    <iconset>
      <normaloff>:/images/switch.png</normaloff>:/images/switch.png</iconset>
    </property>
    <property name="text">

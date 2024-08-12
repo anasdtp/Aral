@@ -22,9 +22,10 @@ ID_RELANCER_TEST    = 0xC1
 ID_ARRET_TEST       = 0xC2
 ID_REPEAT_REQUEST   = 0xD0
 ID_REQUEST_NB_TOURS_FAIT = 0xD1
-ID_ACK_REQUEST_NB_TOURS_FAIT = 0xD2
+ID_ACK_REQUEST_NB_TOURS_FAIT = 0xD2 
 ID_REQUEST_BILAN = 0xD3
 ID_SET_FILTRAGE = 0xD4 #Filtrage des alarmes en fonction des switch SW2. Filtrage = etat stable pendant un temps desiré (etat stable = ne prends pas en compte les changements)
+ID_SET_MODE_TENSION = 0xD5 #Choix du mode de tension, soit 4 tensions soit 2. De base est à 4.
 
 idComEnText = {
     0 : "",
@@ -48,6 +49,7 @@ idComEnText = {
     0xD2 : "ID_ACK_REQUEST_NB_TOURS_FAIT",
     0xD3 : "ID_REQUEST_BILAN",
     0xD4 : "ID_SET_FILTRAGE",
+    0xD5 : "ID_SET_MODE_TENSION"
 }
 
 class Message():

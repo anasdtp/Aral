@@ -36,6 +36,7 @@ void CommunicationPC::begin(HardwareSerial *srl, long baud, String nameBT){
     setNombreTours(1);
     _resetTestRequest = false; _StopTestRequest = false; _NbToursFaitRequest = false; _BilanRequest = false;
     setFiltrage(false);
+    setModeTension(MODE_4_ALARMES);
 }
 
 void CommunicationPC::end()
@@ -245,7 +246,27 @@ void CommunicationPC::RxManage(){
 
         case ID_SET_FILTRAGE:{
             setFiltrage(rxMsg[FIFO_lecture].data[0]);
+            printMidOLED(("Reglage du filtrage :\n"+String(isFiltrageTrue())), 2);
             sendMsg(ID_ACK_GENERAL, (uint8_t)ID_SET_FILTRAGE, (uint8_t)isFiltrageTrue());
+        }break;
+
+        case ID_SET_MODE_TENSION:{
+            switch (rxMsg[FIFO_lecture].data[0])
+            {
+            case 1:{
+                setModeTension(MODE_2_ALARMES);
+            }
+            break;
+            case 2:{
+                setModeTension(MODE_4_ALARMES);
+            }
+            break;
+            default:
+                setModeTension(MODE_4_ALARMES);
+                break;
+            }
+            printMidOLED(("Reglage du mode de tension :\n"+String((uint8_t)(getModeTension()))), 2);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_SET_MODE_TENSION, (uint8_t)getModeTension());
         }break;
 
         default:

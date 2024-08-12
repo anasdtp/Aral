@@ -79,6 +79,9 @@ void General::getTension(EtatVoies &voies, bool affichage){
 
 void General::txLoop(){
   static BilanTest bilan;
+  if(_pc->getNbToursFaitRequest()){
+    _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
+  }
   switch (etat_gen)
   {
   case INIT_COM:
@@ -115,7 +118,7 @@ void General::txLoop(){
       etat_gen = BILAN;
       // LedEtatProgramme(2);
     }
-    else if(_pc->getStopTestRequest()){
+    else if(_pc->getStopTestRequest(false)){
       etat_gen = BILAN;
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
       _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
@@ -132,25 +135,21 @@ void General::txLoop(){
     _pc->getStopTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un stop alors qu'on est deja au bilan
     if(_pc->getRestartTestRequest()){
       etat_gen = TEST_VOIES;
+      nbToursFait = 0;
       for (int i = 0; i < 96; i++)
       {
         bilan.voies[i] = VOIE_NONE;//Remise à 0 du bilan
       }
-      
     }
     if (_pc->getBilanRequest()){
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
     }
-
     TestContinueVoiesBoucleOuverte();//Pour faire tourner les voies si jamais on veut brancher la carte aral à l'ancien logiciel.
   }
   break;
   default:
     etat_gen = INIT_COM;
     break;
-  }
-  if(_pc->getNbToursFaitRequest()){
-    _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
   }
 }
 
@@ -278,7 +277,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
   static char etape = 1, nbInstructions = 5;
   static String alarmeText[4]={"COURT_CIRCUIT", "___ALARME____", "___NORMAL____", "_CONGRUENCE__"};
 
-  static int voieActuelle = 1; 
+  static int voieActuelle = 0; 
   static uint32_t startTimeVoie = 0, TempsSwitchVoie = 0;//750/3; 
   static int _numAlarme = 0; static Tension _TabTension[4]={COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE}, alarmeActuelle;
 
@@ -296,22 +295,32 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       if((millis() - startTimeVoie)>TempsSwitchVoie){
         // //Serial.println("SELECTION_DE_VOIE");
         startTimeVoie = millis();
-        alarmeActuelle = _TabTension[_numAlarme];
-        selectionVoie(alarmeActuelle, voieActuelle);
-        _numAlarme = (_numAlarme + 1)%4;
+
+        alarmeActuelle = _TabTension[_numAlarme];   //** */
         if(!_numAlarme){
-          voieActuelle = (voieActuelle + 1)%97;
+          voieActuelle = (voieActuelle + 1)%97; //** */
           if(!voieActuelle){
-            voieActuelle = 1;
+            voieActuelle = 1; //** */
             nbToursFait++;
             _pc->sendMsg(ID_TEST_EN_COURS, bilan);
             _pc->sendMsgTempsDeReponse(ID_TEST_TEMPS_DE_REPONSE_FILTRAGE, bilan);
+            _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
             for (uint8_t i = 0; i < 96; i++)
             {
               bilan.tempsReponse[i] = 0;
             }
           }
         }
+        selectionVoie(alarmeActuelle, voieActuelle); //ICI on selectionne la voie et l'alarme pour le tour actuelle
+
+        //Et à la suite on régle la voie et l'alarme pour le prochain tour, celui d'aprés
+        if(_pc->getModeTension() == MODE_2_ALARMES){
+          _numAlarme = (_numAlarme + 1)%2;//Soit COURT_CIRCUIT soit ALARME //** */
+        }
+        else{//MODE_4_ALARMES
+          _numAlarme = (_numAlarme + 1)%4;//Les 4 alarmes //** */
+        }
+        
         etape = 1;
         etat_suiv = etat_init[etape];
         etat = etat_suiv;
@@ -385,7 +394,6 @@ bool General::TestComCarteARAL(BilanTest &bilan){
                        //si oui alors verifié si startTimeVoie n'est pas superieur à TIMEOUT_ACK
                                             //si oui alors la voie est en defaut
                                             //si non, on refait la DIFINITIVE_SCRUTATION avec _com->sendMsg(_com->ACK.id);
-           
           if(_pc->isFiltrageTrue()){
             if(millis() - startTimeVoie > TIMEOUT_ACK){
               //Alors la carte aral à un probléme sur cette voie car elle met au maximum 4 secondes pour prendre en compte l'alarme normalement
@@ -481,7 +489,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
 
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
       _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
-      nbToursFait = 0;
+      // nbToursFait = 0;
       _numAlarme = 0;
       voieActuelle = 1;
 

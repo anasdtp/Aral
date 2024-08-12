@@ -29,5 +29,11 @@ typedef struct Message{
 }Message;
 #define SIZE_FIFO 32 //maximum 150 du fait du type char
 
+enum MODE_TENSION{
+    NONE = 0,
+    MODE_4_ALARMES = 1,
+    MODE_2_ALARMES = 2,//Deux etats seulement : COURT_CIRCUIT ou ALARME, 
+};
+
 
 #endif //_COMMUN_LIB
