@@ -688,6 +688,10 @@
   ('doctest',
    'C:\\Users\\anasd\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\doctest.py',
    'PYMODULE'),
+  ('donnees',
+   'C:\\Users\\anasd\\Documents\\PlatformIO\\Projects\\Banc_de_test_carte_ARAL\\Logiciel '
+   'Qt\\Banc_de_test_ARAL\\donnees.py',
+   'PYMODULE'),
   ('email',
    'C:\\Users\\anasd\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\email\\__init__.py',
    'PYMODULE'),
@@ -1985,10 +1989,6 @@
   ('typing_extensions',
    'C:\\Users\\anasd\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\typing_extensions.py',
    'PYMODULE'),
-  ('ui_ajoutControleur',
-   'C:\\Users\\anasd\\Documents\\PlatformIO\\Projects\\Banc_de_test_carte_ARAL\\Logiciel '
-   'Qt\\Banc_de_test_ARAL\\ui_ajoutControleur.py',
-   'PYMODULE'),
   ('ui_dialog',
    'C:\\Users\\anasd\\Documents\\PlatformIO\\Projects\\Banc_de_test_carte_ARAL\\Logiciel '
    'Qt\\Banc_de_test_ARAL\\ui_dialog.py',
@@ -1996,6 +1996,10 @@
   ('ui_ficheValidation',
    'C:\\Users\\anasd\\Documents\\PlatformIO\\Projects\\Banc_de_test_carte_ARAL\\Logiciel '
    'Qt\\Banc_de_test_ARAL\\ui_ficheValidation.py',
+   'PYMODULE'),
+  ('ui_historique',
+   'C:\\Users\\anasd\\Documents\\PlatformIO\\Projects\\Banc_de_test_carte_ARAL\\Logiciel '
+   'Qt\\Banc_de_test_ARAL\\ui_historique.py',
    'PYMODULE'),
   ('ui_mainwindow',
    'C:\\Users\\anasd\\Documents\\PlatformIO\\Projects\\Banc_de_test_carte_ARAL\\Logiciel '

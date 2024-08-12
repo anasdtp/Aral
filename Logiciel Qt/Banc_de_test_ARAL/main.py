@@ -831,7 +831,7 @@ class Historique(QDialog):
     
     def update(self):#Actualisation des JSON 
         generatePDF.add_items_to_json(self.output_JSON_num_serie, self.ui.comboBox_num_serie.currentText())
-        if(self.line_edit_date.text() is not ""):
+        if(self.line_edit_date.text() != ""):
             historiqueData.add_historique(self.ui.comboBox_num_serie.currentText(), 
                                           self.line_edit_date.text(), 
                                           self.combo_box_panne.currentText(), 
