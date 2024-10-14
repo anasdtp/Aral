@@ -47,7 +47,7 @@ def ensure_directory_exists(directory_path):
 output_directory = DRIVELETTER + '/Users/' + USERNAME + '/AppData/Local/BancDeTestAral'
 ensure_directory_exists(output_directory)
 
-output_pdf_directory = DRIVELETTER + '/Users/' + USERNAME + '/AppData/Local/BancDeTestAral/outputPDF'
+output_pdf_directory = output_directory + '/outputPDF'
 ensure_directory_exists(output_pdf_directory)
 
 def get_current_date_string():
@@ -160,10 +160,26 @@ class FicheValidation():
         pdf = createPDFText(Date, yDeBase + 381, 98)
         new_pdf.append(pdf)
         
-        with open('PDF/fiche_validation_aral_vierge.pdf', "rb") as input_file:
-            reader = PdfReader(input_file)
+        try:
+            with open('PDF/fiche_validation_aral_vierge.pdf', "rb") as input_file:
+                reader = PdfReader(input_file)
+                writer = PdfWriter()
+                
+                # Ajouter le texte à chaque page du PDF existant
+                for page_num in range(len(reader.pages)):
+                    page = reader.pages[page_num]
+                    for pdf in new_pdf:
+                        page.merge_page(pdf.pages[0])
+                    writer.add_page(page)
+
+                    # Écrire le nouveau PDF sur disque
+                # with open('outputPDF/output.pdf', "wb") as output_file:
+                #     writer.write(output_file)
+                return writer
+        except (FileNotFoundError):
+            reader = PdfReader()
             writer = PdfWriter()
-            
+                
             # Ajouter le texte à chaque page du PDF existant
             for page_num in range(len(reader.pages)):
                 page = reader.pages[page_num]

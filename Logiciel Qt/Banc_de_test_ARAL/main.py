@@ -13,6 +13,9 @@ import generatePDF
 from ui_ficheValidation import Ui_FicheValidation
 # from ui_switch import Ui_Switch
 from ui_historique import Ui_Historique
+from ui_selectionneur_voies import Ui_Selectionneur_Voies
+
+# from CTKPopubKeyboarb
 #Pour actualiser : 
 #   pyside6-rcc -o Ressources_rc.py Ressources.qrc
 #   pyside6-uic mainwindow.ui -o ui_mainwindow.py
@@ -20,8 +23,18 @@ from ui_historique import Ui_Historique
 #   pyside6-uic tableauBilan.ui -o ui_tableauVoies.py
 #   pyside6-uic ficheValidation.ui -o ui_ficheValidation.py
 #   pyside6-uic ajoutControleur.ui -o ui_ajoutControleur.py 
+#   pyside6-uic selectionneur_voies.ui -o ui_selectionneur_voies.py
 
 from donnees import *
+
+
+# Modification à faire : 
+#    Ajouter une fenetre pour selectionner une voie en particulier avec une alarme. Pour cela du coté de l'esp32 il faut que le troisieme etat renvoit les etats de chaque voie du point de vue de la carte aral, mais sans verification
+#    Ajouter une fenetre de recherche des references d'un composants (par ex: on recherche U5 et ça nous donne la ref 74HC240 et à quoi il sert)
+#    Quand on arrete un test et qu'on le relance, il faut reprendre de la voie 1
+#    Afficher sur le compte rendu final si jamais il y a eu une perte de com
+#    Quand on test une voie avec une alarme, on verifie si l'alarme qu'on veut est bien celle qui est affichée. Mais il faut ajouter une verification que toutes les autres voies n'est pas changé d'alarme(qu'elles soient restées en congruence)
+
 
 class SerialThread(QThread):
     # message_received = Signal(bytes)
@@ -80,7 +93,7 @@ class SerialThread(QThread):
 
     # @Slot(bytes)
     def RxReceive(self, message):
-        byte = int.from_bytes(message)
+        byte = int.from_bytes(message, byteorder='big', signed=False)
         # self.ui.textEdit_panel.append(f"Received: {byte}")
         # print(f"Received: {message}")
         match self.stateRx:
@@ -151,19 +164,19 @@ class MainWindow(QMainWindow):
         self.ui.sendButton_activer_filtrage.clicked.connect(self.sendFiltrage)
         self.ui.sendButton_reglage_nb_etat_en_test.clicked.connect(self.sendModeTension)
 
-        self.dialog = Dialog()
-        self.dialog.ui.buttonBox.accepted.connect(self.start_serial)
+        self.dialog = Dialog(self)
+        self.bilan_window = BilanWindow(self)
+        self.state_window = StateWindow(self)
+        self.fiche_validation = FicheValidation(self)
 
-        self.bilan_window = BilanWindow()
-        self.state_window = StateWindow()
-        self.fiche_validation = FicheValidation()
-
-        self.historique_des_tests = Historique()
+        self.historique_des_tests = Historique(self)
+        self.selectionneur_voies = SelectionneurVoies(self)
         # self.switchARAL = SwitchAral()
         self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openBilanWindow)
         self.ui.actionTableau_Voies_en_Cours.triggered.connect(self.openStateWindow)
         self.ui.actionFicheValidation.triggered.connect(self.openFicheValidation)
         self.ui.actionHistorique.triggered.connect(self.openHistoriqueDesTests)
+        self.ui.Selectionneur_Voies.triggered.connect(self.openSelectionneurVoies)
 
         self.ui.actionQuit.triggered.connect(self.QuitWindows)
         self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
@@ -302,7 +315,9 @@ class MainWindow(QMainWindow):
                 nbToursFait = com.rxMsg[self.FIFO_lecture].data[0] #+ com.rxMsg[self.FIFO_lecture].data[1]<<8
                 voies.nombreDeTourFait = nbToursFait
                 self.ui.textEdit_panel.append(f"")
+                self.ui.textEdit_panel_ACK.append(f"")
                 self.ui.textEdit_panel.append(f"ID_ACK_REQUEST_NB_TOURS_FAIT : Nombre de tours fait : " + str(voies.nombreDeTourFait))
+                self.ui.textEdit_panel_ACK.append(f"ID_ACK_REQUEST_NB_TOURS_FAIT : Nombre de tours fait : " + str(voies.nombreDeTourFait))
             case _:
                 self.ui.textEdit_panel.append(f"Received message from an unknown ID")
         self.FIFO_lecture = (self.FIFO_lecture + 1) % SIZE_FIFO
@@ -392,6 +407,11 @@ class MainWindow(QMainWindow):
         self.sendRelancerTest()
         self.sendTwoBytes(ID_NB_TOURS, nbTours)
 
+    def sendCommandeVoie(self, voies = {"numVoie": 0, "etatVoie": 0}):
+        print("sendCommandeVoie called")
+        sample_message = Message(ID_COMMANDE_VOIE, length=2, data=[voies["numVoie"], voies["etatVoie"]])
+        self.sendMsg(sample_message)
+
     def openBilanWindow(self):
         self.sendEmpty(ID_REQUEST_BILAN)
         self.sendEmpty(ID_REQUEST_NB_TOURS_FAIT)
@@ -422,6 +442,23 @@ class MainWindow(QMainWindow):
         self.historique_des_tests.raise_()
         self.historique_des_tests.activateWindow()
         self.historique_des_tests.init()
+    def openSelectionneurVoies(self):
+        self.selectionneur_voies.show()
+        self.selectionneur_voies.raise_()
+        self.selectionneur_voies.activateWindow()
+
+        self.sendArretTest()
+
+    def closeEvent(self, event):
+        print("Au revoir")
+        self.dialog.close()
+        self.state_window.close()
+        self.bilan_window.close()
+        self.fiche_validation.close()
+        self.historique_des_tests.close()
+        self.selectionneur_voies.close()
+        # self.switchARAL.close()
+        super().closeEvent(event)
     
     # def openSwitchARAL(self):
     #     self.switchARAL.show()
@@ -452,25 +489,19 @@ class MainWindow(QMainWindow):
         self.close()
         QApplication.quit()
         
-    def closeEvent(self, event):
-        print("Au revoir")
-        self.dialog.close()
-        self.state_window.close()
-        self.bilan_window.close()
-        self.fiche_validation.close()
-        self.historique_des_tests.close()
-        # self.switchARAL.close()
-        super().closeEvent(event)
+    
 #end MainWindow
 
 class Dialog(QDialog):
-    def __init__(self):
+    def __init__(self, main_window : MainWindow):
         super().__init__()
+        self.main_window = main_window  # Stocker la référence à MainWindow
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
         self.setWindowTitle("CHOIX PORT COM")
         self.setWindowIcon(QIcon('logo.ico'))
-        # self.ui.buttonBox.accepted.connect(self.start_serial) #Cas si jamais on n'appuie sur OK. Fait dans la mainwindow pour afficher à l'utilisateur ce qu'on a fait
+        # self.ui.buttonBox.accepted.connect(self.start_serial) #Cas si jamais on n'appuie sur OK. Fonction dans la mainwindow pour afficher à l'utilisateur ce qu'on a fait
+        self.ui.buttonBox.accepted.connect(self.main_window.start_serial)
         self.ui.buttonBox.rejected.connect(self.reject) #Cas si jamais on n'appuie sur annuler
 
         self.populate_com_ports()
@@ -495,8 +526,9 @@ class Dialog(QDialog):
 #end Dialog
 
 class BilanWindow(QDialog):
-    def __init__(self):
+    def __init__(self, main_window = None):
         super().__init__()
+        self.main_window = main_window  # Stocker la référence à MainWindow
         self.ui = Ui_tableauVoies()
         self.ui.setupUi(self)
         self.update_states()
@@ -531,8 +563,9 @@ class BilanWindow(QDialog):
 
 
 class StateWindow(QDialog):
-    def __init__(self):
+    def __init__(self, main_window = None):
         super().__init__()
+        self.main_window = main_window  # Stocker la référence à MainWindow
         self.ui = Ui_tableauVoies()
         self.ui.setupUi(self)
         self.update_states()
@@ -585,8 +618,9 @@ class donneesFiche():
 donnees = donneesFiche()
 
 class FicheValidation(QDialog):
-    def __init__(self):
+    def __init__(self, main_window : MainWindow):
         super().__init__()
+        self.main_window = main_window  # Stocker la référence à MainWindow
         self.ui = Ui_FicheValidation()
         self.ui.setupUi(self)
         self.setWindowTitle("Etat Voies en Cours, envoyé par la carte ARAL")
@@ -604,20 +638,20 @@ class FicheValidation(QDialog):
         self.ui.comboBox_controleur_technique.clear()
         self.ui.comboBox_controleur_externe.clear()
         try:
-            with open('PDF/controleur_technique.json', "r") as file:
+            with open(generatePDF.output_directory + '/controleur_technique.json', "r") as file:
                 items = json.load(file)
                 print("Loading controleur technique ", items)
                 self.ui.comboBox_controleur_technique.addItems(items)
         except (FileNotFoundError, json.JSONDecodeError):
-            print("PDF/controleur_technique.json error or not found")
+            print(generatePDF.output_directory + "/controleur_technique.json error or not found")
             # pass  # No items to load or file is empty
         try:
-            with open('PDF/controleur_externe.json', "r") as file:
+            with open(generatePDF.output_directory + '/controleur_externe.json', "r") as file:
                 items = json.load(file)
                 print("Loading controleur externe ", items)
                 self.ui.comboBox_controleur_externe.addItems(items)
         except (FileNotFoundError, json.JSONDecodeError):
-            print("PDF/controleur_externe.json error or not found")
+            print(generatePDF.output_directory + "/controleur_externe.json error or not found")
             # pass  # No items to load or file is empty
 
     def genererNumSerie(self):
@@ -662,8 +696,8 @@ class FicheValidation(QDialog):
         donnees.numSerie = self.ui.lineEdit_num_serie.text()
         donnees.controleurTechnique = self.ui.comboBox_controleur_technique.currentText()
         donnees.controleurExterne = self.ui.comboBox_controleur_externe.currentText()
-        generatePDF.add_items_to_json('PDF/controleur_technique.json', donnees.controleurTechnique)
-        generatePDF.add_items_to_json('PDF/controleur_externe.json', donnees.controleurExterne)
+        generatePDF.add_items_to_json(generatePDF.output_directory + '/controleur_technique.json', donnees.controleurTechnique)
+        generatePDF.add_items_to_json(generatePDF.output_directory + 'controleur_externe.json', donnees.controleurExterne)
 
         donnees.commentaires = self.getCommentaires()
         fiche = generatePDF.FicheValidation()
@@ -707,8 +741,9 @@ class DonneesHistorique():
 historiqueData = DonneesHistorique()
 
 class Historique(QDialog):
-    def __init__(self):
+    def __init__(self, main_window = None):
         super().__init__()
+        self.main_window = main_window  # Stocker la référence à MainWindow
         self.ui = Ui_Historique()
         self.ui.setupUi(self)
         self.setWindowTitle("Historique des cartes ARAL")
@@ -822,7 +857,6 @@ class Historique(QDialog):
         self.label_en_panne.show()
         self.combo_box_panne.show()
         self.label_commentaires.show()
-        self.label_commentaires.clear()
         self.text_edit_commentaires.show()
         self.text_edit_commentaires.clear()
 
@@ -840,6 +874,58 @@ class Historique(QDialog):
         print(historiqueData.get_ALL_data())
 
 
+class SelectionneurVoies(QDialog):
+    def __init__(self, main_window : MainWindow):
+        super().__init__()
+        self.main_window = main_window  # Stocker la référence à MainWindow
+        self.ui = Ui_Selectionneur_Voies()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Selectionneur Voies")
+        self.setWindowIcon(QIcon('logo.ico'))
+
+        self.mode = 0
+        self.ui.pushButton.clicked.connect(self.basculerSurAutrePartieVoies)
+        
+        self.connect_sliders()
+
+        self.consigneVoies = {
+            "numVoie": 0,
+            "etatVoie": 0
+        }
+
+    def basculerSurAutrePartieVoies(self):
+        if(self.ui.pushButton.text() == "Appuyer sur ce bouton pour pouvoir selectionner les voies 49-96"):
+            self.mode = 1
+            self.ui.pushButton.setText("Appuyer sur ce bouton pour pouvoir selectionner les voies 01-48")
+        else:
+            self.mode = 0
+            self.ui.pushButton.setText("Appuyer sur ce bouton pour pouvoir selectionner les voies 49-96")
+        print("Mode : " + str(self.mode))
+        self.reset_sliders()
+
+    def connect_sliders(self):
+        for voie in range(1, 49):
+            slider = getattr(self.ui, f'verticalSlider_{voie}')
+            slider.valueChanged.connect(lambda value, name=f'verticalSlider_{voie}': self.update_voies(name, value))
+    
+    def reset_sliders(self, withoutOne = None):
+        for voie in range(1, 49):
+            if(withoutOne != voie):
+                slider = getattr(self.ui, f'verticalSlider_{voie}')
+                slider.setValue(0)
+
+    def update_voies(self, numVoie, etatVoie):
+        numVoie = int(numVoie.split('_')[1])
+        etatVoie = 3 - int(etatVoie) 
+        self.reset_sliders(numVoie)
+        if(self.mode == 1):
+            numVoie += 48
+        print("Voie n°" + str(numVoie) + " : " + str(etatVoie))
+
+        self.consigneVoies["numVoie"] = numVoie
+        self.consigneVoies["etatVoie"] = etatVoie if etatVoie >= 0 else 3
+        self.main_window.sendCommandeVoie(self.consigneVoies)
+        
 
 def main():
     app = QApplication([]) 
@@ -847,7 +933,6 @@ def main():
     main_window.show()
 
     main_window.dialog.show()
-
 
     sys.exit(app.exec())
 

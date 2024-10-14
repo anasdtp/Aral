@@ -20,6 +20,9 @@ ID_TEST_TEMPS_DE_REPONSE_FILTRAGE_UNE_VOIE = 0xB9 #Envoi du temps de reponse d'u
 ID_ACK_GENERAL      = 0xC0
 ID_RELANCER_TEST    = 0xC1
 ID_ARRET_TEST       = 0xC2
+ID_COMMANDE_VOIE   = 0xC3 #Hors test, commande des voies directement via un interface graphique. Envoi de la voie sur 1 octet et de l'etat sur 1 octet  [FF][ID_COMMANDE_VOIES][2][VOIE][ETAT][CKS][FF]
+ID_RANDOM_SELECTION_VOIE = 0xC4 #Selection aléatoire des voies, 1 = activer la selection aléatoire, 0 = desactiver
+
 ID_REPEAT_REQUEST   = 0xD0
 ID_REQUEST_NB_TOURS_FAIT = 0xD1
 ID_ACK_REQUEST_NB_TOURS_FAIT = 0xD2 

@@ -1,3 +1,3 @@
 {
-    "files": ["ficheValidation.ui","ajoutControleur.ui","main.py","Ressources.qrc","dialog.ui","switchAral.ui","tableauBilan.ui","mainwindow.ui","historique.ui"]
+    "files": ["ficheValidation.ui","main.py","tableauBilan.ui","switchAral.ui","historique.ui","mainwindow.ui","dialog.ui","Ressources.qrc","ajoutControleur.ui","selectionneur_voies.ui"]
 }

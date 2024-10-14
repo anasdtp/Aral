@@ -16,21 +16,33 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QAbstractButton, QApplication, QComboBox, QDialog,
-    QDialogButtonBox, QLabel, QPushButton, QSizePolicy,
-    QTextEdit, QVBoxLayout, QWidget)
+    QDialogButtonBox, QHBoxLayout, QLabel, QPushButton,
+    QSizePolicy, QTextEdit, QVBoxLayout, QWidget)
 
 class Ui_Historique(object):
     def setupUi(self, Dialog):
         if not Dialog.objectName():
             Dialog.setObjectName(u"Dialog")
-        Dialog.resize(310, 466)
+        Dialog.resize(337, 466)
         self.verticalLayout = QVBoxLayout(Dialog)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label_num_serie = QLabel(Dialog)
+        self.label_num_serie.setObjectName(u"label_num_serie")
+        self.label_num_serie.setMaximumSize(QSize(70, 16777215))
+        self.label_num_serie.setTextFormat(Qt.AutoText)
+
+        self.horizontalLayout_2.addWidget(self.label_num_serie)
+
         self.comboBox_num_serie = QComboBox(Dialog)
         self.comboBox_num_serie.setObjectName(u"comboBox_num_serie")
         self.comboBox_num_serie.setEditable(True)
 
-        self.verticalLayout.addWidget(self.comboBox_num_serie)
+        self.horizontalLayout_2.addWidget(self.comboBox_num_serie)
+
+
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
 
         self.label_historique = QLabel(Dialog)
         self.label_historique.setObjectName(u"label_historique")
@@ -70,6 +82,7 @@ class Ui_Historique(object):
 
     def retranslateUi(self, Dialog):
         Dialog.setWindowTitle(QCoreApplication.translate("Dialog", u"Dialog", None))
+        self.label_num_serie.setText(QCoreApplication.translate("Dialog", u"N\u00b0 s\u00e9rie :", None))
         self.label_historique.setText(QCoreApplication.translate("Dialog", u"Historique :", None))
         self.pushButton_nouvelle_panne.setText(QCoreApplication.translate("Dialog", u"Cr\u00e9er nouvelle Fiche de panne", None))
     # retranslateUi

@@ -129,6 +129,9 @@
       </item>
       <item>
        <widget class="QComboBox" name="comboBox_nbTours">
+        <property name="editable">
+         <bool>false</bool>
+        </property>
         <item>
          <property name="text">
           <string>1</string>
@@ -362,6 +365,8 @@
    <addaction name="actionFicheValidation"/>
    <addaction name="separator"/>
    <addaction name="actionHistorique"/>
+   <addaction name="separator"/>
+   <addaction name="Selectionneur Voies"/>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -369,7 +374,7 @@
      <x>0</x>
      <y>0</y>
      <width>1215</width>
-     <height>22</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFichiers">
@@ -381,11 +386,13 @@
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
-   <widget class="QMenu" name="menuCreation_PDF">
+   <widget class="QMenu" name="menuApplications">
     <property name="title">
-     <string>Creation PDF</string>
+     <string>Applications</string>
     </property>
     <addaction name="actionFicheValidation"/>
+    <addaction name="actionHistorique"/>
+    <addaction name="Selectionneur Voies"/>
    </widget>
    <widget class="QMenu" name="menuPort_COM">
     <property name="title">
@@ -396,21 +403,21 @@
    </widget>
    <addaction name="menuFichiers"/>
    <addaction name="menuPort_COM"/>
-   <addaction name="menuCreation_PDF"/>
+   <addaction name="menuApplications"/>
   </widget>
   <action name="actionTableau_Voies_Bilan">
    <property name="text">
-    <string>Tableau Voies Bilan</string>
+    <string>&amp;Tableau Voies Bilan</string>
    </property>
   </action>
   <action name="actionTableau_Voies_en_Cours">
    <property name="text">
-    <string>Tableau Voies en Cours</string>
+    <string>&amp;Tableau Voies en Cours</string>
    </property>
   </action>
   <action name="actionFicheValidation">
    <property name="text">
-    <string>Fiche de Validation</string>
+    <string>&amp;Fiche de Validation</string>
    </property>
   </action>
   <action name="actionConnect">
@@ -437,7 +444,7 @@
      <normaloff>:/images/clear.png</normaloff>:/images/clear.png</iconset>
    </property>
    <property name="text">
-    <string>Clear &amp;Log</string>
+    <string>&amp;Clear &amp;Log</string>
    </property>
   </action>
   <action name="actionQuit">
@@ -473,7 +480,7 @@
      <normaloff>:/images/switch.png</normaloff>:/images/switch.png</iconset>
    </property>
    <property name="text">
-    <string>Réglage du switch SW2</string>
+    <string>&amp;Réglage du switch SW2</string>
    </property>
    <property name="toolTip">
     <string>switch_SW2</string>
@@ -481,10 +488,22 @@
   </action>
   <action name="actionHistorique">
    <property name="text">
-    <string>Historique de test</string>
+    <string>&amp;Historique de test</string>
    </property>
    <property name="toolTip">
     <string>Historique de test</string>
+   </property>
+  </action>
+  <action name="Selectionneur Voies">
+   <property name="icon">
+    <iconset resource="Ressources.qrc">
+     <normaloff>:/images/selectionneurVoies.png</normaloff>:/images/selectionneurVoies.png</iconset>
+   </property>
+   <property name="text">
+    <string>&amp;Selectionneur Voies</string>
+   </property>
+   <property name="toolTip">
+    <string>Selectionneur Voies</string>
    </property>
   </action>
  </widget>
