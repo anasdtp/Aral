@@ -52,14 +52,18 @@ private:
         NONE,
     };
 
+    EtatVoies _voies;
     int nbToursFait; // nombre de tours de tests avant le bilan
-    etatVoieTestee _act;
+    EtatUneVoie _setUneVoie;
+
     void selectionVoie(Tension alarme, uint8_t voie = 1);
 
-    void txLoop();
+    void txManage();
+    void ComBasicARAL(AralState etat);
     bool initialisationARAL();
-    bool TestComCarteARAL(BilanTest &bilan);
-    void TestContinueVoiesBoucleOuverte();
+    bool TestCarteARAL(BilanTest &bilan);
+    void TestCarteARALSansVerification(EtatUneVoie voie, bool random = false);
+    void TestContinueEnBoucleOuverte();
     bool ControleParMoniteurSerie();
 
     

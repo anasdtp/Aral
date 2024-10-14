@@ -20,9 +20,11 @@
 
 #define ID_ACK_GENERAL 0xC0 //Ack pour tous le reste
 #define ID_RELANCER_TEST 0xC1
-#define ID_ARRET_TEST 0xC2
-#define ID_REPEAT_REQUEST 0xD0
+#define ID_ARRET_TEST 0xC2 
+#define ID_COMMANDE_VOIES 0xC3//Hors test, commande des voies directement via un interface graphique. Envoi de la voie sur 1 octet et de l'etat sur 1 octet  [FF][ID_COMMANDE_VOIES][2][VOIE][ETAT][CKS][FF]
+#define ID_RANDOM_SELECTION_VOIE 0xC4 //Selection aléatoire des voies, 1 = activer la selection aléatoire, 0 = desactiver
 
+#define ID_REPEAT_REQUEST 0xD0
 #define ID_REQUEST_NB_TOURS_FAIT 0xD1
 #define ID_ACK_REQUEST_NB_TOURS_FAIT 0xD2
 #define ID_REQUEST_BILAN 0xD3 //Reponse avec l'id ID_TEST_TERMINEE si terminée sinon ID_TEST_EN_COURS si test en cours
@@ -92,6 +94,22 @@ public:
     bool isFiltrageTrue(){
       return _filtrage;
     }
+    
+    void setCmdVoie(EtatUneVoie cmdVoie){
+      _cmdVoie = cmdVoie; 
+      _cmdVoieReceived = true;
+    }
+    bool getCmdVoie(EtatUneVoie &cmdVoie, bool afterCheck = false){
+      if(_cmdVoieReceived){
+        cmdVoie = _cmdVoie; 
+        _cmdVoieReceived = afterCheck; 
+        return true;
+      } 
+      return false;
+    }
+
+    void setCmdRandomSelectionVoie(bool cmdRandomSelectionVoie){_cmdRandomSelectionVoie = cmdRandomSelectionVoie;}
+    bool getCmdRandomSelectionVoie(){return _cmdRandomSelectionVoie;}
 
     void setModeTension(MODE_TENSION mode){_mode = mode;}
     MODE_TENSION getModeTension(){return _mode;}
@@ -104,6 +122,8 @@ private:
     int NBTOURS; 
     bool _resetTestRequest, _StopTestRequest, _NbToursFaitRequest, _BilanRequest;
     bool _filtrage;//Flag pour savoir si le filtrage est activé ou non
+    EtatUneVoie _cmdVoie; bool _cmdVoieReceived = false;
+    bool _cmdRandomSelectionVoie = true;
 
     MODE_TENSION _mode = MODE_4_ALARMES;
 

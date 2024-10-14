@@ -4,11 +4,15 @@
 #include <CreateurTension.h>
 #include <SelectionDeLaVoie.h>
 
-
-
 typedef struct EtatVoies{
     Tension voies[96];
 }EtatVoies;
+
+typedef struct EtatUneVoie{
+    uint8_t numVoie;
+    Tension voie;
+}EtatUneVoie;
+
 
 #define VOIE_OK 0x30
 #define VOIE_EN_DEFAUT 0x10
@@ -18,7 +22,6 @@ typedef struct BilanTest{
   int nbToursFait;
   uint8_t tempsReponse[96];//Si filtrage activé, temps de reponse de chaque voies, //En dizieme de seconde car la valeur est sur un octet, soit 255 au max
 }BilanTest;
-
 
 typedef struct Message{
     uint8_t id;
@@ -34,6 +37,8 @@ enum MODE_TENSION{
     MODE_4_ALARMES = 1,
     MODE_2_ALARMES = 2,//Deux etats seulement : COURT_CIRCUIT ou ALARME, 
 };
+
+
 
 
 #endif //_COMMUN_LIB

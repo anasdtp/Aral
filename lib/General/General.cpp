@@ -20,10 +20,10 @@ void General::IHMBegin()
 }
 
 void General::run(){
-    _pc->RxManage();
+    _pc ->RxManage();
     _com->RxManage();//Fonction qui gére en parrallele les données triées prealablement 
 
-    txLoop();
+    txManage();
 }
 
 void General::selectionVoie(Tension alarme, uint8_t voie){//de 1 à 96
@@ -77,11 +77,9 @@ void General::getTension(EtatVoies &voies, bool affichage){
   if(affichage){Serial.println("");}
 }
 
-void General::txLoop(){
+void General::txManage(){
   static BilanTest bilan;
-  if(_pc->getNbToursFaitRequest()){
-    _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
-  }
+
   switch (etat_gen)
   {
   case INIT_COM:
@@ -98,6 +96,9 @@ void General::txLoop(){
         bilan.tempsReponse[i] = 0;
       }
     }
+    else if(_pc->getStopTestRequest()){
+      etat_gen = BILAN;//Pour que si la personne ne veut pas faire de test automatique, mais plutot utiliser l'ancien logiciel TeraTerm
+    }
     //Test Bilan a commenté: 
     // for (int i = 0; i < 96; i++)
     // {
@@ -113,17 +114,20 @@ void General::txLoop(){
     break;
   case TEST_VOIES:
   {
-    if(TestComCarteARAL(bilan)){
+    if(TestCarteARAL(bilan)){
       // LedBilanTest(bilan);
       etat_gen = BILAN;
       // LedEtatProgramme(2);
     }
     else if(_pc->getStopTestRequest(false)){
       etat_gen = BILAN;
-      _pc->sendMsg(ID_TEST_TERMINEE, bilan);
       _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
+      _pc->sendMsg(ID_TEST_TERMINEE, bilan);
     }else if (_pc->getBilanRequest()){
       _pc->sendMsg(ID_TEST_EN_COURS, bilan);
+    }
+    else if(_pc->getNbToursFaitRequest()){
+      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
     }
     _pc->getRestartTestRequest();//Mis ici pour baisser le flag si jamais l'utilisateur envoit un reset alors qu'on est deja entrain de faire un test
   }
@@ -141,15 +145,53 @@ void General::txLoop(){
         bilan.voies[i] = VOIE_NONE;//Remise à 0 du bilan
       }
     }
-    if (_pc->getBilanRequest()){
+    else if (_pc->getBilanRequest()){
       _pc->sendMsg(ID_TEST_TERMINEE, bilan);
     }
-    TestContinueVoiesBoucleOuverte();//Pour faire tourner les voies si jamais on veut brancher la carte aral à l'ancien logiciel.
+    else if(_pc->getNbToursFaitRequest()){
+      _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
+    }
+
+    _pc->getCmdVoie(_setUneVoie);
+    // TestContinueEnBoucleOuverte();//Pour faire tourner les voies si jamais sans verification
+    TestCarteARALSansVerification(_setUneVoie, _pc->getCmdRandomSelectionVoie());
   }
   break;
   default:
     etat_gen = INIT_COM;
     break;
+  }
+}
+
+void General::ComBasicARAL(AralState etat){
+  switch (etat)
+  {
+    case RESET:{
+      _com->ACK.id = ID_RESET;
+      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_RESET;
+      _com->sendMsg(_com->ACK.id);
+    }
+    break;
+    case PREMIERE_SCRUTATION:{
+      _com->ACK.id = ID_PREMIERE_SCRUTATION;
+      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
+      _com->sendMsg(_com->ACK.id);
+    }
+    break;
+    case CHECK_CAPTEURS:{
+      _com->ACK.id = ID_CHECK_CAPTEURS;
+      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_CHECK_CAPTEURS;
+      _com->sendMsg(_com->ACK.id);
+    }
+    break;
+    case DIFINITIVE_SCRUTATION:{
+      _com->ACK.id = ID_DIFINITIVE_SCRUTATION;
+      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_DIFINITIVE_SCRUTATION;
+      _com->sendMsg(_com->ACK.id);
+    }
+    break;
+    default:
+      break;
   }
 }
 
@@ -160,16 +202,16 @@ bool General::initialisationARAL(){
   static uint32_t startTimeVoie = 0;
   static uint8_t *color[3] = {GREEN};
   static String msgErreur = "";
+  static int nb_essais = 0;
 
   switch (etat)
   {
     case RESET:{
-      static int nb_essais = 0;
+      
       //Serial.println("INITIALISATION CARTE ARAL...");
       printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur, 1);
-      _com->ACK.id = ID_RESET;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_RESET;
-      _com->sendMsg(_com->ACK.id);
+      
+      ComBasicARAL(etat);
 
       setLedColor(etat+1 + (nb_essais++), color[0]);
 
@@ -186,9 +228,8 @@ bool General::initialisationARAL(){
     break;
     case PREMIERE_SCRUTATION:{
       printMidOLED("INITIALISATION\nCARTE ARAL...\n" + msgErreur, 1);
-      _com->ACK.id = ID_PREMIERE_SCRUTATION;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
-      _com->sendMsg(_com->ACK.id);
+      
+      ComBasicARAL(etat);
 
       setLedColor(etat+1, color[0]);
 
@@ -198,9 +239,7 @@ bool General::initialisationARAL(){
     }
     break;
     case CHECK_CAPTEURS:{
-      _com->ACK.id = ID_CHECK_CAPTEURS;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_CHECK_CAPTEURS;
-      _com->sendMsg(_com->ACK.id);
+      ComBasicARAL(etat);
 
       setLedColor(etat+1, color[0]);
 
@@ -210,9 +249,7 @@ bool General::initialisationARAL(){
     }
     break;
     case DIFINITIVE_SCRUTATION:{
-      _com->ACK.id = ID_DIFINITIVE_SCRUTATION;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_DIFINITIVE_SCRUTATION;
-      _com->sendMsg(_com->ACK.id);
+      ComBasicARAL(etat);
 
       setLedColor(etat+1, color[0]);
 
@@ -251,12 +288,14 @@ bool General::initialisationARAL(){
     break;
     case FINISH:{
       //Serial.println("Communication carte ARAL Fonctionnelle !");
-      EtatVoies voies;
-      getTension(voies);
-      _pc->sendMsg(ID_ETAT_VOIES, voies);
+      getTension(_voies);
+      _pc->sendMsg(ID_ETAT_VOIES, _voies);
       setLedColor(1);//NUM_PIXELS);
       LedEtatProgramme(0);
-      etat = NONE;
+      etat = etat_init[0]; etat_suiv = etat;
+      nbInstructions = 4;
+      etape = 1;
+
       return true;
     }
     break;
@@ -270,8 +309,7 @@ bool General::initialisationARAL(){
   return false;
 }
 
-bool General::TestComCarteARAL(BilanTest &bilan){
-
+bool General::TestCarteARAL(BilanTest &bilan){
   static const AralState etat_init[5] = {SELECTION_DE_VOIE, PREMIERE_SCRUTATION, CHECK_CAPTEURS, DIFINITIVE_SCRUTATION, VERIFICATION_BONNE_VOIE};
   static AralState etat = etat_init[0], etat_suiv = etat;
   static char etape = 1, nbInstructions = 5;
@@ -303,8 +341,8 @@ bool General::TestComCarteARAL(BilanTest &bilan){
             voieActuelle = 1; //** */
             nbToursFait++;
             _pc->sendMsg(ID_TEST_EN_COURS, bilan);
-            _pc->sendMsgTempsDeReponse(ID_TEST_TEMPS_DE_REPONSE_FILTRAGE, bilan);
             _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
+            _pc->sendMsgTempsDeReponse(ID_TEST_TEMPS_DE_REPONSE_FILTRAGE, bilan);
             for (uint8_t i = 0; i < 96; i++)
             {
               bilan.tempsReponse[i] = 0;
@@ -315,7 +353,8 @@ bool General::TestComCarteARAL(BilanTest &bilan){
 
         //Et à la suite on régle la voie et l'alarme pour le prochain tour, celui d'aprés
         if(_pc->getModeTension() == MODE_2_ALARMES){
-          _numAlarme = (_numAlarme + 1)%2;//Soit COURT_CIRCUIT soit ALARME //** */
+          alarmeActuelle = _numAlarme?alarmeActuelle : _TabTension[2];
+          _numAlarme = (_numAlarme + 1)%2;//Soit COURT_CIRCUIT soit ALARME //** */ ATTENTION!! La tension COURT_CIRCUIT sera renvoyé en tant que NORMAL!
         }
         else{//MODE_4_ALARMES
           _numAlarme = (_numAlarme + 1)%4;//Les 4 alarmes //** */
@@ -336,9 +375,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
     break;
     case PREMIERE_SCRUTATION:{
       // //Serial.println("PREMIERE_SCRUTATION");
-      _com->ACK.id = ID_PREMIERE_SCRUTATION;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_PREMIERE_SCRUTATION;
-      _com->sendMsg(_com->ACK.id);
+      ComBasicARAL(etat);
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
@@ -346,9 +383,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
     break;
     case CHECK_CAPTEURS:{
       // //Serial.println("CHECK_CAPTEURS");
-      _com->ACK.id = ID_CHECK_CAPTEURS;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_CHECK_CAPTEURS;
-      _com->sendMsg(_com->ACK.id);
+      ComBasicARAL(etat);
 
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
@@ -356,21 +391,18 @@ bool General::TestComCarteARAL(BilanTest &bilan){
     break;
     case DIFINITIVE_SCRUTATION:{
       // //Serial.println("DIFINITIVE_SCRUTATION");
-      _com->ACK.id = ID_DIFINITIVE_SCRUTATION;
-      _com->ACK.waitingAckFrom = ID_ACKNOWLEDGE_DIFINITIVE_SCRUTATION;
-      _com->sendMsg(_com->ACK.id);
+      ComBasicARAL(etat);
       etat_suiv = etat_init[etape];
       etat = ATT_ACK;
     }
     break;
     case VERIFICATION_BONNE_VOIE:{
       // //Serial.println("VERIFICATION_BONNE_VOIE");
-      EtatVoies voies;
-      getTension(voies);
-      _pc->sendMsg(ID_ETAT_VOIES, voies);
+      getTension(_voies);
+      _pc->sendMsg(ID_ETAT_VOIES, _voies);
       //Serial.printf("Test de la voie %2d, alarme %s", voieActuelle, alarmeText[alarmeActuelle]);
       if(voieActuelle > 0 && voieActuelle <= 96){
-        if(voies.voies[voieActuelle-1] == alarmeActuelle){
+        if(_voies.voies[voieActuelle-1] == alarmeActuelle){
           if(bilan.voies[voieActuelle-1] != VOIE_EN_DEFAUT){
             bilan.voies[voieActuelle-1] = VOIE_OK;
             //Serial.println(" OKAY!");
@@ -390,23 +422,33 @@ bool General::TestComCarteARAL(BilanTest &bilan){
           etape = 1;
         }
         else{
-          //Ici verifier si filtrage est activé, 
-                       //si oui alors verifié si startTimeVoie n'est pas superieur à TIMEOUT_ACK
+          // Ici verifier si filtrage est activé, 
+                       // si oui alors verifié si startTimeVoie n'est pas superieur à TIMEOUT_ACK
                                             //si oui alors la voie est en defaut
                                             //si non, on refait la DIFINITIVE_SCRUTATION avec _com->sendMsg(_com->ACK.id);
           if(_pc->isFiltrageTrue()){
             if(millis() - startTimeVoie > TIMEOUT_ACK){
-              //Serial.println(" LA VOIE N'EST PAS BONNE!!");
+              // Serial.println(" LA VOIE N'EST PAS BONNE!!");
               bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
-              bilan.tempsReponse[voieActuelle - 1] = 0;
+              
+              uint8_t diziemeDeSeconde = (millis() - startTimeVoie)/100;//En dizieme de seconde car la valeur est sur un octet, soit 255 au max
+              if(diziemeDeSeconde >= bilan.tempsReponse[voieActuelle - 1]){
+                bilan.tempsReponse[voieActuelle - 1] = diziemeDeSeconde;
+                //Serial.printf(" Temps de réponse : %d\n", diziemeDeSeconde);
+              }
+              
               etat = SELECTION_DE_VOIE;
               etape = 1;
             }
             else{
-              //Alors c'est normal que l'etat reste le meme et on attend que la carte ARAL prend en compte l'alarme
-              //On repete la phase com pour recuperer le tableau des 96 voies
+              // Alors c'est normal que l'etat reste le meme et on attend que la carte ARAL prend en compte l'alarme
+              // On repete la phase com pour recuperer le tableau des 96 voies
               // etat = PREMIERE_SCRUTATION;
-              
+              uint8_t diziemeDeSeconde = (millis() - startTimeVoie)/100;//En dizieme de seconde car la valeur est sur un octet, soit 255 au max
+              if(diziemeDeSeconde >= bilan.tempsReponse[voieActuelle - 1]){
+                bilan.tempsReponse[voieActuelle - 1] = diziemeDeSeconde;
+                //Serial.printf(" Temps de réponse : %d\n", diziemeDeSeconde);
+              }
               etape = 1;
               etat_suiv = etat_init[etape];
               etat = etat_suiv;
@@ -414,9 +456,15 @@ bool General::TestComCarteARAL(BilanTest &bilan){
             }
           }
           else{
-            //Serial.println(" LA VOIE N'EST PAS BONNE!!");
+            // Serial.println(" LA VOIE N'EST PAS BONNE!!");
             bilan.voies[voieActuelle-1] = VOIE_EN_DEFAUT;
-            bilan.tempsReponse[voieActuelle - 1] = 0;
+
+            uint8_t diziemeDeSeconde = (millis() - startTimeVoie)/100;//En dizieme de seconde car la valeur est sur un octet, soit 255 au max
+            if(diziemeDeSeconde >= bilan.tempsReponse[voieActuelle - 1]){
+              bilan.tempsReponse[voieActuelle - 1] = diziemeDeSeconde;
+              //Serial.printf(" Temps de réponse : %d\n", diziemeDeSeconde);
+            }
+
             etat = SELECTION_DE_VOIE;
             etape = 1;
           }
@@ -440,7 +488,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
         LedACK();
         etat = etat_suiv;
         etape ++;
-        if(etape > nbInstructions){
+        if(etape > nbInstructions){//Sert a rien
           etat = SELECTION_DE_VOIE;
           etape = 1;
         }
@@ -489,7 +537,7 @@ bool General::TestComCarteARAL(BilanTest &bilan){
       _pc->sendMsg(ID_ACK_REQUEST_NB_TOURS_FAIT, (uint16_t)nbToursFait);
       // nbToursFait = 0;
       _numAlarme = 0;
-      voieActuelle = 1;
+      voieActuelle = 0;
 
       etat = SELECTION_DE_VOIE;
       return true;
@@ -504,7 +552,79 @@ bool General::TestComCarteARAL(BilanTest &bilan){
   return false;
 }
 
-void General::TestContinueVoiesBoucleOuverte(){
+void General::TestCarteARALSansVerification(EtatUneVoie voie, bool random){
+  static const AralState etat_init[5] = {SELECTION_DE_VOIE, PREMIERE_SCRUTATION, CHECK_CAPTEURS, DIFINITIVE_SCRUTATION, VERIFICATION_BONNE_VOIE};
+  static AralState etat = etat_init[0], etat_suiv = etat;
+  static char etape = 1, nbInstructions = 5;
+
+  switch (etat)
+  {
+    case SELECTION_DE_VOIE:{
+      if(random){
+        TestContinueEnBoucleOuverte();
+      }else{
+        selectionVoie(voie.voie, voie.numVoie);
+      }
+
+      etape = 1;
+      etat_suiv = etat_init[etape];
+      etat = etat_suiv;
+      etape++;
+    }
+    break;
+    case PREMIERE_SCRUTATION:{
+      ComBasicARAL(etat);
+      etat_suiv = etat_init[etape];
+      etat = ATT_ACK;
+    }
+    break;
+    case CHECK_CAPTEURS:{
+      ComBasicARAL(etat);
+      etat_suiv = etat_init[etape];
+      etat = ATT_ACK;
+    }
+    break;
+    case DIFINITIVE_SCRUTATION:{
+      ComBasicARAL(etat);
+      etat_suiv = etat_init[etape];
+      etat = ATT_ACK;
+    }
+    break;
+    case VERIFICATION_BONNE_VOIE:{
+      getTension(_voies);
+      _pc->sendMsg(ID_ETAT_VOIES, _voies);
+
+      etat = SELECTION_DE_VOIE;
+      etape = 1;
+    }
+    break;
+    case ATT_ACK:{
+      if(_com->checkACK()){
+        // //Serial.println("ACK reçu ! ");
+        LedACK();
+        etat = etat_suiv;
+        etape ++;
+        if(etape > nbInstructions){//Sert a rien, mais au cas ou
+          etat = SELECTION_DE_VOIE;
+          etape = 1;
+        }
+      }
+      else if(_com->checkRepeatRequest()){
+        LedACK();
+        _com->sendMsg(_com->ACK.id);
+        setLedColor(NUM_PIXELS, BLUE);
+        printMidOLED("La carte ARAL demande une repetition du dernier message...", 1);
+        _pc->sendMsg(ID_CARTE_ARAL_REPEAT_REQUEST, (uint8_t)_com->ACK.id);
+      }
+    }
+    break;
+    default:
+      break;
+  }
+}
+
+
+void General::TestContinueEnBoucleOuverte(){
   static int voie = 1; static uint32_t startTimeVoie = 0, TempsSwitchVoie = 300; 
   static int numAlarme = 0; static Tension TabTension[4]={COURT_CIRCUIT, ALARME, NORMAL, CONGRUENCE};
 

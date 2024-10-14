@@ -35,3 +35,24 @@ void CreateurTension::creationTensionVoie_1_48(Tension tension){
 void CreateurTension::creationTensionVoie_49_96(Tension tension){
     setBus(_Bus2, tension);
 }
+
+Tension CreateurTension::toTension(uint8_t etat){
+    switch (etat)
+    {
+    case 0:
+        return COURT_CIRCUIT;
+        break;
+    case 1:
+        return ALARME;
+        break;
+    case 2:
+        return NORMAL;
+        break;
+    case 3:
+        return CONGRUENCE;
+        break;
+    default:
+        break;
+    }
+    return CONGRUENCE;
+}

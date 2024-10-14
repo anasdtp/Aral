@@ -268,6 +268,19 @@ void CommunicationPC::RxManage(){
             printMidOLED(("Reglage du mode de tension :\n"+String((uint8_t)(getModeTension()))), 2);
             sendMsg(ID_ACK_GENERAL, (uint8_t)ID_SET_MODE_TENSION, (uint8_t)getModeTension());
         }break;
+        case ID_COMMANDE_VOIES:{
+            // _cmdVoie.numVoie = rxMsg[FIFO_lecture].data[0];
+            // _cmdVoie.voie = CreateurTension::toTension(rxMsg[FIFO_lecture].data[1]);
+            // _cmdVoieReceived = true;
+            setCmdVoie({rxMsg[FIFO_lecture].data[0], CreateurTension::toTension(rxMsg[FIFO_lecture].data[1])});
+            setCmdRandomSelectionVoie(false);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_COMMANDE_VOIES);
+        }break;
+
+        case ID_RANDOM_SELECTION_VOIE:{
+            setCmdRandomSelectionVoie(rxMsg[FIFO_lecture].data[0]);
+            sendMsg(ID_ACK_GENERAL, (uint8_t)ID_RANDOM_SELECTION_VOIE);
+        }break;
 
         default:
             sendMsg(ID_ACK_GENERAL);
