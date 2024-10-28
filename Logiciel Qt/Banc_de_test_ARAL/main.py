@@ -643,6 +643,7 @@ class FicheValidation(QDialog):
                 print("Loading controleur technique ", items)
                 self.ui.comboBox_controleur_technique.addItems(items)
         except (FileNotFoundError, json.JSONDecodeError):
+            generatePDF.add_items_to_json(generatePDF.output_directory + '/controleur_technique.json', " ")
             print(generatePDF.output_directory + "/controleur_technique.json error or not found")
             # pass  # No items to load or file is empty
         try:
@@ -651,6 +652,7 @@ class FicheValidation(QDialog):
                 print("Loading controleur externe ", items)
                 self.ui.comboBox_controleur_externe.addItems(items)
         except (FileNotFoundError, json.JSONDecodeError):
+            generatePDF.add_items_to_json(generatePDF.output_directory + '/controleur_externe.json', " ")
             print(generatePDF.output_directory + "/controleur_externe.json error or not found")
             # pass  # No items to load or file is empty
 
@@ -684,12 +686,16 @@ class FicheValidation(QDialog):
                         problemes.append(f"Voie {debut + 1} : {etat_str}")
                     else:
                         problemes.append(f"Voies {debut + 1} à {fin + 1} : {etat_str}")
-                commentaires = generatePDF.CommentaireCarteMinimal + "Des problèmes ont été détectés dans le bilan des tests:\n" + "\n".join(problemes)
+                commentaires = generatePDF.CommentaireCarteMinimal + "Des problèmes ont été détectés dans le bilan des tests:\n" + "\n".join(problemes) + "\n"
             if(voies.perteDeCom>0):
                 commentaires += "Perte(s) de communication durant le test ("+ str(voies.perteDeCom)+" fois)\n"
+            if(voies.nombreDeTourFait < 50):
+                commentaires += ("• Test fonctionnel rapide de " + str(voies.nombreDeTourFait) + " cycles.")
+            else:
+                commentaires += ("• Test en endurance de " + str(int(voies.nombreDeTourFait * 0.06)) + " heures.")
         else:
             commentaires = generatePDF.CommentaireCarteFonctionnelle
-        
+            
         return commentaires
 
     def createPDFFicheValidation(self):
@@ -697,7 +703,7 @@ class FicheValidation(QDialog):
         donnees.controleurTechnique = self.ui.comboBox_controleur_technique.currentText()
         donnees.controleurExterne = self.ui.comboBox_controleur_externe.currentText()
         generatePDF.add_items_to_json(generatePDF.output_directory + '/controleur_technique.json', donnees.controleurTechnique)
-        generatePDF.add_items_to_json(generatePDF.output_directory + 'controleur_externe.json', donnees.controleurExterne)
+        generatePDF.add_items_to_json(generatePDF.output_directory + '/controleur_externe.json', donnees.controleurExterne)
 
         donnees.commentaires = self.getCommentaires()
         fiche = generatePDF.FicheValidation()

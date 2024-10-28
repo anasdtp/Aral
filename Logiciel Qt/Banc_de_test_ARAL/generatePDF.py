@@ -226,4 +226,5 @@ def test():
     output = fiche.generateFicheValidation(numSerie, controleurTechnique, controleurExterne)
     fiche.writePDF(output)    
     
-# test()
+if __name__ == "__main__":
+    test()
