@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1215</width>
-    <height>751</height>
+    <height>756</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -223,6 +223,7 @@
       </property>
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
         <underline>false</underline>
         <strikeout>false</strikeout>
@@ -268,6 +269,7 @@
       </property>
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
         <underline>false</underline>
         <strikeout>false</strikeout>
@@ -298,6 +300,7 @@
       </property>
       <property name="font">
        <font>
+        <weight>75</weight>
         <bold>true</bold>
         <underline>false</underline>
         <strikeout>false</strikeout>
@@ -367,6 +370,8 @@
    <addaction name="actionHistorique"/>
    <addaction name="separator"/>
    <addaction name="Selectionneur Voies"/>
+   <addaction name="separator"/>
+   <addaction name="actionChercherRef"/>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -374,7 +379,7 @@
      <x>0</x>
      <y>0</y>
      <width>1215</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFichiers">
@@ -393,6 +398,7 @@
     <addaction name="actionFicheValidation"/>
     <addaction name="actionHistorique"/>
     <addaction name="Selectionneur Voies"/>
+    <addaction name="actionChercherRef"/>
    </widget>
    <widget class="QMenu" name="menuPort_COM">
     <property name="title">
@@ -504,6 +510,14 @@
    </property>
    <property name="toolTip">
     <string>Selectionneur Voies</string>
+   </property>
+  </action>
+  <action name="actionChercherRef">
+   <property name="text">
+    <string>&amp;Chercher Référence</string>
+   </property>
+   <property name="toolTip">
+    <string>Chercher Référence</string>
    </property>
   </action>
  </widget>

@@ -1,5 +1,5 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit, QDialog, QVBoxLayout, QTableWidgetItem, QPushButton, QTableWidget, QLabel, QComboBox, QTextEdit, QLineEdit, QHBoxLayout
+from PySide6.QtWidgets import QApplication, QMainWindow, QTextEdit, QDialog, QVBoxLayout, QTableWidgetItem, QPushButton, QTableWidget, QLabel, QComboBox, QTextEdit, QLineEdit, QHBoxLayout, QMessageBox
 from PySide6.QtCore import QThread, Signal, Slot, QTimer
 from PySide6.QtGui import QColor, QBrush, QIcon
 import serial
@@ -14,6 +14,7 @@ from ui_ficheValidation import Ui_FicheValidation
 # from ui_switch import Ui_Switch
 from ui_historique import Ui_Historique
 from ui_selectionneur_voies import Ui_Selectionneur_Voies
+from ui_chercherRef import Ui_ChercherRef
 
 # from CTKPopubKeyboarb
 #Pour actualiser : 
@@ -160,7 +161,8 @@ class MainWindow(QMainWindow):
         self.ui.sendButton_repriseTest.clicked.connect(self.sendRelancerTest)
         self.ui.sendButton_arret.clicked.connect(self.sendArretTest)
         self.ui.sendButton_lancementTestNuit.clicked.connect(self.sendNbTours8Heures)
-
+        
+        
         self.ui.sendButton_activer_filtrage.clicked.connect(self.sendFiltrage)
         self.ui.sendButton_reglage_nb_etat_en_test.clicked.connect(self.sendModeTension)
 
@@ -171,18 +173,21 @@ class MainWindow(QMainWindow):
 
         self.historique_des_tests = Historique(self)
         self.selectionneur_voies = SelectionneurVoies(self)
+        self.chercher_reference = ChercherRef(self)
         # self.switchARAL = SwitchAral()
         self.ui.actionTableau_Voies_Bilan.triggered.connect(self.openBilanWindow)
         self.ui.actionTableau_Voies_en_Cours.triggered.connect(self.openStateWindow)
         self.ui.actionFicheValidation.triggered.connect(self.openFicheValidation)
         self.ui.actionHistorique.triggered.connect(self.openHistoriqueDesTests)
         self.ui.Selectionneur_Voies.triggered.connect(self.openSelectionneurVoies)
+        self.ui.actionChercherRef.triggered.connect(self.openChercherRef)
 
         self.ui.actionQuit.triggered.connect(self.QuitWindows)
         self.ui.actionClearLog.triggered.connect(self.textPanel_Clear)
         self.ui.actionConnect.triggered.connect(self.openDialogWindow)
         self.ui.actionDisconnect.triggered.connect(self.closeSerial)
         self.ui.actionReset.triggered.connect(self.resetStruct)
+        
 
         print("Initialized MainWindow")
 
@@ -448,15 +453,22 @@ class MainWindow(QMainWindow):
         self.selectionneur_voies.activateWindow()
 
         self.sendArretTest()
+        
+    def openChercherRef(self):
+        self.chercher_reference.show()
+        self.chercher_reference.raise_()
+        self.chercher_reference.activateWindow()
 
     def closeEvent(self, event):
-        print("Au revoir")
+        #print("Au revoir")
         self.dialog.close()
         self.state_window.close()
         self.bilan_window.close()
         self.fiche_validation.close()
         self.historique_des_tests.close()
         self.selectionneur_voies.close()
+        self.chercher_reference.close()
+        
         # self.switchARAL.close()
         super().closeEvent(event)
     
@@ -534,6 +546,8 @@ class BilanWindow(QDialog):
         self.update_states()
         self.setWindowTitle("Bilan de test")
         self.setWindowIcon(QIcon('logo.ico'))
+
+    
 
     # @Slot(list)
     def update_states(self):
@@ -616,6 +630,59 @@ class donneesFiche():
         self.controleurExterne = ""
         self.commentaires = generatePDF.CommentaireCarteFonctionnelle
 donnees = donneesFiche()
+
+
+
+
+class ChercherRef(QDialog):
+        def __init__(self, main_window : MainWindow):
+            super().__init__()
+            self.main_window = main_window  # Stocker la référence à MainWindow
+            self.ui = Ui_ChercherRef()
+            self.ui.setupUi(self)
+            self.setWindowTitle("Rechercher une référence")
+            self.setWindowIcon(QIcon('logo.ico'))
+            print("Chercher référence")
+            self.ui.pushButton_chercher.clicked.connect(self.EcrireRef)
+        
+            self.file_path = "/references.json"
+            print(f"Fichier Json'{self.file_path}")
+            self.ref = {}
+            self.remplirComboBox()
+            
+            
+            
+        def remplirComboBox(self):
+            print("remplir combo box")
+            try:
+                with open(self.file_path, "r") as file:
+                    self.ref = json.load(file)
+                    print(self.ref)
+            except (FileNotFoundError, json.JSONDecodeError):
+                print("Erreurrrrrrrrrrrr")
+                self.ref = {}
+                
+            self.ui.comboBox.clear()
+            for key in self.ref.keys():
+                self.ui.comboBox.addItem(key)
+            self.ui.comboBox.setCurrentText("")
+                
+        def EcrireRef(self):
+            selected_ref = self.ui.comboBox.currentText()
+            if selected_ref in self.ref :
+                value = self.ref[selected_ref]
+                print(f"Référence sélectionnée : {selected_ref} avec valeur : {value}")
+                #QMessageBox.information(self, "Référence", f"Vous avez sélectionné : {selected_ref} - Valeur : {value}")
+                self.ui.textEdit.append(f"{selected_ref} : {value}")
+            else :
+                self.ui.textEdit.append(f"Non présent")
+                print(f"FAUX")
+            
+                
+           
+            
+
+
 
 class FicheValidation(QDialog):
     def __init__(self, main_window : MainWindow):
@@ -771,8 +838,10 @@ class Historique(QDialog):
 
         self.label_date = QLabel("Date :")
         self.line_edit_date = QLineEdit()
+        
         self.label_en_panne = QLabel("En Panne?")
         self.combo_box_panne = QComboBox()
+        
         self.combo_box_panne.addItems(["Oui", "Non", "Peut-être"])
         self.label_commentaires = QLabel("Commentaires :")
         self.text_edit_commentaires = QTextEdit()

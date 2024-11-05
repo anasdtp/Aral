@@ -30,6 +30,7 @@ ID_REQUEST_BILAN = 0xD3
 ID_SET_FILTRAGE = 0xD4 #Filtrage des alarmes en fonction des switch SW2. Filtrage = etat stable pendant un temps desiré (etat stable = ne prends pas en compte les changements)
 ID_SET_MODE_TENSION = 0xD5 #Choix du mode de tension, soit 4 tensions soit 2. De base est à 4.
 
+
 idComEnText = {
     0 : "",
     0xA0 : "ID_NB_TOURS",
