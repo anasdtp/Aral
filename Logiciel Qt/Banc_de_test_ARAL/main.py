@@ -645,7 +645,7 @@ class ChercherRef(QDialog):
             print("Chercher référence")
             self.ui.pushButton_chercher.clicked.connect(self.EcrireRef)
         
-            self.file_path = "/references.json"
+            self.file_path = "references.json" #chemin relatif fonctionne pas avec /references.json
             print(f"Fichier Json'{self.file_path}")
             self.ref = {}
             self.remplirComboBox()
